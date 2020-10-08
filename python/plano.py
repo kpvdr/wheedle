@@ -352,7 +352,7 @@ def parse_json(json):
     return _json.loads(json)
 
 def emit_json(obj):
-    return _json.dumps(obj, f, indent=4, separators=(",", ": "), sort_keys=True)
+    return _json.dumps(obj, indent=4, separators=(",", ": "), sort_keys=True)
 
 def http_get(url, output_file=None, insecure=False):
     options = [

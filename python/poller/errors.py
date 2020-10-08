@@ -22,7 +22,11 @@ class DisabledRepoError(PollerError):
     def __init__(self, repo_full_name):
         super().__init__('DisabledRepoError: Repository {} is disabled'.format(repo_full_name))
 
-
+class EmptyCommitListError(PollerError):
+    """ Error when no commits are returned from source repository """
+    def __init__(self, repo):
+        super().__init__('EmptyCommitListError: No commits were found in repository {}'.format( \
+            repo.full_name()))
 
 class ErrorList(PollerError):
     """ Allows multiple exception objects to be raised together """
@@ -52,9 +56,10 @@ class ErrorList(PollerError):
 
 class HttpError(PollerError):
     """ Error when a HTTP GET request returns anything other than 200 (ok) """
-    def __init__(self, response):
-        super().__init__('HttpError: GET {} returned status {} ({})'.format( \
-            response.url[0: response.url.find('?')], response.status_code, response.reason))
+    def __init__(self, method, response):
+        super().__init__('HttpError: {} {} returned status {} ({})\n{}'.format( \
+            method, response.url[0: response.url.find('?')], response.status_code, response.reason,
+            response.url))
         self.response = response
 
 

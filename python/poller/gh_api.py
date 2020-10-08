@@ -23,11 +23,34 @@ def gh_http_get_request(url, auth=None, params=None, content_type='json'):
             raise _errors.ContentTypeError(resp)
         return resp.json()
     except _requests.HTTPError:
-        raise _errors.HttpError(resp)
+        raise _errors.HttpError('GET', resp)
+
+def gh_http_post_request(url, auth=None, data=None, json=None, params=None):
+    """ Send HTTP PUT request to GitHub """
+    try:
+        resp = _requests.post(url, auth=auth, data=data, json=json, params=params)
+        resp.raise_for_status()
+    except _requests.HTTPError:
+        raise _errors.HttpError('POST', resp)
+
+def gh_http_put_request(url, auth=None, data=None, params=None):
+    """ Send HTTP PUT request to GitHub """
+    try:
+        resp = _requests.put(url, auth=auth, data=data, params=params)
+        resp.raise_for_status()
+    except _requests.HTTPError:
+        raise _errors.HttpError('PUT', resp)
 
 def str_time_to_unix_ts(str_time):
-    """ Convert timestamp in ISO 8601 to unix timestamp """
+    """ Convert timestamp in ISO 8601 to unix timestamp in seconds """
     return _time.mktime(_datetime.datetime.strptime(str_time, '%Y-%m-%dT%H:%M:%S%z').timetuple())
+
+def str_time_to_milli_ts(str_time):
+    """ Convert timestamp in ISO 8601 to unix timestamp in milliseconds """
+    ts = int(str_time_to_unix_ts(str_time) * 1000)
+    print('DEBUG: str_time_to_milli_ts={}'.format(ts))
+    return ts
+    #return str_time_to_unix_ts(str_time) * 1000
 
 
 
@@ -75,7 +98,7 @@ class GhArtifactItem(MetadataMap):
             with open(artifact_file_name, 'wb') as artifact_file:
                 for chunk in req.iter_content(chunk_size=MAX_DOWNLOAD_CHUNK_SIZE):
                     artifact_file.write(chunk)
-            return self.name() + '.zip'
+            return self.name()
         return None
     def _download_url(self):
         return self._metadata['archive_download_url']
@@ -127,6 +150,66 @@ class GhArtifactList(MetadataMap):
 
 
 
+class GhCommit(MetadataMap):
+    """ GitHub commit """
+    def as_map(self):
+        """ Return a map representation of this commit suitable for JSON """
+        return {'hash': self.hash(),
+                'date': self.date(),
+                'author': self.author_str(),
+                'message': self.message()}
+    def author_email(self):
+        """ Get author email """
+        return self._metadata['commit']['author']['email']
+    def author_name(self):
+        """ Get author name """
+        return self._metadata['commit']['author']['name']
+    def author_str(self):
+        """ Return author string in format 'name <email>' """
+        return '{} <{}>'.format(self.author_name(), self.author_email())
+    def date(self):
+        """ Get commit date/time stamp in ISO 8601 format"""
+        return self._metadata['commit']['committer']['date']
+    def html_url(self):
+        """ Return HTML URL for this commit """
+        return self._metadata['html_url']
+    def message(self):
+        """ Get commit message """
+        return self._metadata['commit']['message']
+    def hash(self):
+        """ Get commit sha """
+        return self._metadata['sha']
+    def __repr__(self):
+        return '{} {} {}'.format(self.hash(), self.date(), self.author_str())
+
+
+class GhCommitList(MetadataMap):
+    """ List of GitHub commits """
+    def __init__(self, metadata):
+        super().__init__(metadata)
+        self._commit_list = []
+        for commit in metadata:
+            self._commit_list.append(GhCommit(commit))
+    def commit_list(self):
+        """ Return the commit list """
+        return self._commit_list
+    def extend(self, other):
+        """ Extend this object with the contents of antoher list object """
+        self._commit_list.extend(other.commit_list())
+    def last_commit(self):
+        """ Return last (most recent) commit, or None if no commits exist """
+        if len(self._commit_list) > 0:
+            return self._commit_list[0]
+        return None
+    def __iter__(self):
+        return self._commit_list.__iter__()
+    def __len__(self):
+        return len(self._commit_list)
+    def __repr__(self):
+        return 'GhCommitList(num_commist={})'.format(len(self._commit_list))
+
+
+
 class GhRepository(MetadataMap):
     """ GitHub repository metadata as retrieved from GitHub REST API """
     def __init__(self, metadata, repo_data):
@@ -135,6 +218,15 @@ class GhRepository(MetadataMap):
     def auth(self):
         """ Get repo authorization as a tuple (uid, token) """
         return self._repo_data.auth
+    def commit_list(self, since=None, per_page=50, page=0):
+        """ Get commit list """
+        params = {'accept': 'application/vnd.github.v3+json', 'per_page': per_page, 'page': page}
+        if since is not None:
+            params['since'] = since
+        return GhCommitList(gh_http_get_request( \
+            '{}/repos/{}/{}/commits'.format(self._repo_data.service_url, self._repo_data.owner,
+                                            self._repo_data.name),
+            auth=self._repo_data.auth, params=params))
     def full_name(self):
         """ Get repo full name """
         return self._repo_data.full_name()
@@ -210,6 +302,9 @@ class GhWorkflowItem(MetadataMap):
     def to_str(self):
         """ Return a pretty string used in reporting """
         num_artifacts = len(self._artifact_list)
+        if (self.status() != 'completed' or self.conclusion() != 'success') and num_artifacts == 0:
+            return 'Run #{} updated {}: {}:{}'.format(self.run_number(), self.updated_at(),
+                                                      self.status(), self.conclusion())
         if num_artifacts == 0:
             suffix = 's'
         elif num_artifacts == 1:
