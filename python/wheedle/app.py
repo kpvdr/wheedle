@@ -27,10 +27,10 @@ import multiprocessing as _mp
 import time as _time
 
 import fortworth as _fortworth
-import poller.artifact_poller as _apoller
-import poller.commit_poller as _cpoller
-import poller.errors as _errors
-import poller.gh_api as _gh_api
+import wheedle.artifact_poller as _apoller
+import wheedle.commit_poller as _cpoller
+import wheedle.errors as _errors
+import wheedle.gh_api as _gh_api
 
 
 # === GITHUB ===

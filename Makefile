@@ -19,7 +19,7 @@
 
 .PHONY: run
 run:
-	PYTHONPATH=${PYTHONPATH}:python python3 -m poller.app
+	PYTHONPATH=${PYTHONPATH}:python python3 -m wheedle.app
 
 .PHONY: help
 help:

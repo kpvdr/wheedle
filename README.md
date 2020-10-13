@@ -1,10 +1,10 @@
-# actions-artifact-poller
+# Wheedle
 
 ## Introduction
-This project contains two pollsers:
-1. **Artifact Poller:** Polls a GitHub project's actions for new artifacts.
-1. **Commit Poller:** Polls a GitHub project for recent commits, and will trigger a second GitHub
-   project action if a new commit is found.
+This project independently polls a GitHub repository for new commits, and then triggers an action
+on a second GitHub repository when one or more new commits are found. Secondly, an artifact poller
+checks the second GitHub repository for artifacts resulting from successful runs of its action
+workflows. If found, these are downloaded and saved/tagged.
 
 This application will find use primarily in CI/CD projects where some or all of the package
 builds are made on GitHub Actions projects created for the purpose of building and testing
@@ -12,7 +12,9 @@ one or more packages. As it is inadvisable to leave credentials for the GitHub b
 notify a private or secure system, this project can be run from a secure location to poll for
 the availability of artifacts on a regular basis, and download them when found.
 
-### Commit Poller
+This project contains two pollers:
+
+#### 1. Commit Poller
 This poller will check for commits in any GitHub repository. It is typically used to monitor a
 repository that contains the source code for which a second GitHub repository exists to build
 packages for the source project and test them. As there may be no direct connection between these
@@ -23,7 +25,7 @@ The commit poller will check for new commits since the last successful build was
 comparing the commit hashes in the Git commit log. If a new commit is detected since the last
 successful build, a build action is triggered on the build repository's actions.
 
-### Artifact Poller
+#### 2. Artifact Poller
 This poller will check for new GitHub Actions artifacts which may become available. The poller is
 run at a regular interval, and keeps track of artifacts it has already seen so as to avoid
 downloading duplicate artifacts.
@@ -97,5 +99,5 @@ Use ctrl+C or send a TERM signal.
 ## Troubleshooting
 Error | Possible cause
 ------|---------------
-TokenNotFoundError | The GitHub token file was not found. See Requirements above.
-ServiceConnectionError | Either or both the Stagger and Bodega services could not be reached. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
+`TokenNotFoundError` | The GitHub token file was not found. See Requirements above.
+`ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.

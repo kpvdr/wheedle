@@ -36,9 +36,9 @@ import zipfile as _zipfile
 import requests as _requests
 
 import fortworth as _fortworth
-import poller.errors as _errors
-import poller.gh_api as _gh_api
-import poller.poller as _poller
+import wheedle.errors as _errors
+import wheedle.gh_api as _gh_api
+import wheedle.poller as _poller
 
 
 

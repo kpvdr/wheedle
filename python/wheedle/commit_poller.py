@@ -33,9 +33,9 @@ import sched as _sched
 import time as _time
 
 import fortworth as _fortworth
-import poller.errors as _errors
-import poller.gh_api as _gh_api
-import poller.poller as _poller
+import wheedle.errors as _errors
+import wheedle.gh_api as _gh_api
+import wheedle.poller as _poller
 
 
 
@@ -114,7 +114,6 @@ class CommitPoller(_poller.Poller):
     def _read_data(self):
         """ Read the persistent data for this poller """
         # TODO: For now, no persistent data is saved for the commit poller
-        pass
         # data_file_name = _fortworth.join(self._poller_data.data_dir,
         #                                  self._poller_data.last_trigger_file_name)
         # if _fortworth.exists(data_file_name):
@@ -151,7 +150,6 @@ class CommitPoller(_poller.Poller):
     def _write_data(self):
         """ Write the persistent data for this poller """
         # TODO: For now, no persistent data is saved for the commit poller
-        pass
         # data_file_name = _fortworth.join(self._poller_data.data_dir,
         #                                  self._poller_data.last_trigger_file_name)
         # _fortworth.write_json(data_file_name, self._data)

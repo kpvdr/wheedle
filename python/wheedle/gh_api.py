@@ -26,7 +26,7 @@ import time as _time
 import requests as _requests
 
 import fortworth as _fortworth
-import poller.errors as _errors
+import wheedle.errors as _errors
 
 
 # Chunk size for HTTP transfer of files (see GhArtifactItem.download())

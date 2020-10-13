@@ -25,8 +25,8 @@ Common classes used by the various pollers.
 import abc as _abc
 import logging as _logging
 
-import poller.errors as _errors
-import poller.gh_api as _gh_api
+import wheedle.errors as _errors
+import wheedle.gh_api as _gh_api
 
 
 
