@@ -116,14 +116,17 @@ class GhArtifactItem(MetadataMap):
 
     def download(self, data_dir, auth):
         """ Download artifact to data_dir """
-        with _requests.get(self._download_url(), stream=True, auth=auth) as req:
-            req.raise_for_status()
-            artifact_file_name = _fortworth.join(data_dir, self.name() + '.zip')
-            with open(artifact_file_name, 'wb') as artifact_file:
-                for chunk in req.iter_content(chunk_size=MAX_DOWNLOAD_CHUNK_SIZE):
-                    artifact_file.write(chunk)
-            return self.name()
-        return None
+        try:
+            with _requests.get(self._download_url(), stream=True, auth=auth) as req:
+                req.raise_for_status()
+                artifact_file_name = _fortworth.join(data_dir, self.name() + '.zip')
+                with open(artifact_file_name, 'wb') as artifact_file:
+                    for chunk in req.iter_content(chunk_size=MAX_DOWNLOAD_CHUNK_SIZE):
+                        artifact_file.write(chunk)
+                return self.name()
+            return None
+        except _requests.exceptions.HTTPError as err:
+            raise _errors.HttpError('GET', req)
 
     def _download_url(self):
         return self._metadata['archive_download_url']

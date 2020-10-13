@@ -94,9 +94,11 @@ class GhConnectionRefusedError(PollerError):
 class HttpError(PollerError):
     """ Error when a HTTP GET request returns anything other than 200 (ok) """
 
-    def __init__(self, method, response):
-        super().__init__('HttpError: {} to "{}" returned status {} ({})'.format( \
-            method, response.url[0: response.url.find('?')], response.status_code, response.reason))
+    def __init__(self, method, response, msg=None):
+        msg_suffix = '' if msg is not None else '\n  {}'.format(msg)
+        super().__init__('HttpError: {} to "{}" returned status {} ({}){}'.format( \
+            method, response.url[0: response.url.find('?')], response.status_code, response.reason,
+            msg_suffix))
         self.response = response
 
 

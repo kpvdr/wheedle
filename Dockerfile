@@ -16,3 +16,11 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
+FROM fedora
+
+# Required packages
+RUN dnf install -y git make python3-requests
+RUN git clone https://github.com/kpvdr/wheedle.git
+WORKDIR /wheedle
+RUN make install

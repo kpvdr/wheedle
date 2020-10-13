@@ -1,10 +1,8 @@
 # Wheedle
 
 ## Introduction
-This project independently polls a GitHub repository for new commits, and then triggers an action
-on a second GitHub repository when one or more new commits are found. Secondly, an artifact poller
-checks the second GitHub repository for artifacts resulting from successful runs of its action
-workflows. If found, these are downloaded and saved/tagged.
+This project independently polls a pair of GitHub repositories, one for for new commits in order to
+trigger a GitHub Action on the second, and the second for new GitHub Actions artifacts.
 
 This application will find use primarily in CI/CD projects where some or all of the package
 builds are made on GitHub Actions projects created for the purpose of building and testing
@@ -42,13 +40,14 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 (see Configuration below) to reflect the new name.
 
 ## Dependencies
-- requests (`python -m pip install requests`)
+- Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some repos (such as
+  Fedora) but must be installed using `pip install` on those where this is not the case.
 
 ## Building and installing
 ```
 git clone https://github.com/kpvdr/actions-artifact-poller.git
 ```
-No build or install (yet).
+No build or install (yet). The application runs using make directly from the repository.
 
 ## Configuration
 In the following tables, there are references to two GitHub repositories:

@@ -1,3 +1,5 @@
+#! /bin/bash
+
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,29 +19,6 @@
 # under the License.
 #
 
-.EXPORT_ALL_VARIABLES:
-INSTALL_DIR := ${HOME}/.local/opt/wheedle
-
-.PHONY: clean
-clean:
-	@scripts/clean.sh
-
-,PHONY: install
-install:
-	@scripts/install.sh
-
-.PHONY: run
-run: install
-	cd ${INSTALL_DIR}; python3 -m wheedle.app
-
-.PHONY: uninstall
-uninstall:
-	@scripts/uninstall.sh
-
-.PHONY: help
-help:
-	@echo "    clean     - Remove persistent data"
-	@echo "    install   - Install application to ${INSTALL_DIR}"
-	@echo "    run       - Run application"
-	@echo "    uninstall - Uninstall application from ${INSTALL_DIR}"
-	@echo "    help      - Display this help"
+if [[ -n ${INSTALL_DIR} && -d ${INSTALL_DIR} ]]; then
+	rm -f ${INSTALL_DIR}/data/*.json
+fi
