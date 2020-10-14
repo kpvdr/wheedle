@@ -21,6 +21,11 @@ FROM fedora
 
 # Required packages
 RUN dnf install -y git make python3-requests
+
+WORKDIR /build
 RUN git clone https://github.com/kpvdr/wheedle.git
-WORKDIR /wheedle
-RUN make install
+WORKDIR wheedle
+RUN mkdir data
+COPY data/token data
+RUN TOKEN_FILE=/build/wheedle/data/token make install
+CMD ["make run"]

@@ -19,6 +19,7 @@
 
 .EXPORT_ALL_VARIABLES:
 INSTALL_DIR := ${HOME}/.local/opt/wheedle
+_TOKEN_FILE := ${TOKEN_FILE}
 
 .PHONY: clean
 clean:

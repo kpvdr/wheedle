@@ -24,11 +24,11 @@ if [[ ! -e ${INSTALL_DIR}/wheedle/app.py ]]; then
   cp python/*.py ${INSTALL_DIR}/
   mkdir -p ${INSTALL_DIR}/wheedle
 	cp python/wheedle/*.py ${INSTALL_DIR}/wheedle/
-  if [[ -v ${TOKEN_FILE} ]]; then
-    if [[ -f ${TOKEN_FILE} ]]; then
-      cp ${TOKEN_FILE} ${INSTALL_DIR}/data/
+  if [[ -n ${_TOKEN_FILE} ]]; then
+    if [[ -f ${_TOKEN_FILE} ]]; then
+      cp ${_TOKEN_FILE} ${INSTALL_DIR}/data/
     else
-      echo "WARNING: ${TOKEN_FILE} does not exist or is not a file, token not copied to ${INSTALL_DIR}/data."
+      echo "WARNING: ${_TOKEN_FILE} does not exist or is not a file, token not copied to ${INSTALL_DIR}/data."
     fi
   else
     echo "WARNING: \${TOKEN_FILE} not set, token not copied to ${INSTALL_DIR}/data."

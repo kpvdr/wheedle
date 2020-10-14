@@ -45,17 +45,17 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 
 ## Building and installing
 ```
-git clone https://github.com/kpvdr/actions-artifact-poller.git
+git clone https://github.com/kpvdr/wheedle.git
 ```
 No build or install (yet). The application runs using make directly from the repository.
 
 ## Configuration
 In the following tables, there are references to two GitHub repositories:
-1. Source repository: The repository containing the source code, and which the commit poller polls
+1. Source repository: The repository containing the source code, and which the *commit poller* polls
    for new commits;
-2. Build repository: The repository which is triggered by the commit poller, and which builds
-   and tests packages from the source code in the Source Repository. The Artifact poller will
-   check this repository's actions for new artifacts.
+2. Build repository: The repository which is triggered by the *commit poller*, and which builds
+   and tests packages from the source code in the Source Repository. The *artifact poller* will
+   check this repository's actions for new artifacts and process them in Bodega and Stagger.
 
 Currently configuration is performed by modifying app.py, where the following constants are
 defined:
@@ -71,26 +71,35 @@ Constant | Description
 `GH_API_AUTH_UID` | Name of token owner which will be used for GitHub API calls.
 `GH_API_TOKEN_FILE_NAME` | Text file containing a GitHub personal access token.
 `DATA_DIR` | Location of locally saved data and the GitHub token file.
-`COMMIT_POLLER_START_DELAY` | Delay in seconds for starting the commit poller after the artifact poller starts. Allows the artifact poller to download the last commit hash.
-`ARTIFACT_POLLING_INTERVAL_SECS` | Artifact polling interval in seconds.
-`ERROR_POLLING_INTERVAL_SECS` | Artifact polling interval in seconds when the Bodega and Stagger services are not running.
+`COMMIT_POLLER_START_DELAY` | Delay in seconds for starting the *commit poller* after the *artifact poller* starts. Allows the *artifact poller* to download the last commit hash.
+`ARTIFACT_POLLING_INTERVAL_SECS` | *Artifact poller* interval in seconds.
+`ERROR_POLLING_INTERVAL_SECS` | *Artifact poller* interval in seconds when the Bodega and Stagger services are not running.
 `LAST_BUILD_CID_ARTIFACT_NAME` | Name of file located in the `DATA_DIR` which contains the last successful build commit hash.
 `BUILD_ARTIFACT_NAME_LIST` | Python list of strings containing names of artifacts to be downloaded and processed if found. Wildcards are allowed.
 `ARTIFACT_POLLER_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains the artifact ids of previously downloaded artifacts.
 `TAG` | Tag to be used with Stagger when pushing artifact metadata.
 `BODEGA_URL` | URL for the Bodega artifact service.
 `STAGGER_URL` | URL for the Stagger artifact tagging service.
-`COMMIT_POLLING_INTERVAL_SECS` | Commit poller interval in seconds.
-`COMMIT_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains commit poller persistent data.
+`COMMIT_POLLING_INTERVAL_SECS` | *Commit poller* interval in seconds.
+`COMMIT_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains *commit poller* persistent data.
 `DEFAULT_LOG_LEVEL` | Log level (one of `DEBUG`, `INFO`, `WARNING`. `ERROR`, `CRITICAL`).
 
-A file-based configuration will be added soon which will allow multiple instances of the artifact
+**TODO:** A file-based configuration will be added soon which will allow multiple instances of the artifact
 and commit pollers to run against different repositories.
 
-## Running
+## Installing and Running
+Install is performed when first running, and is located at `${HOME}/.local/opt/wheedle`.
 ```
 make run
 ```
+However, install can be performed separately by running `make install` first.
+
+**NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
+an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
+Requirements above). If this variable does not exist, or the token file is not present, then it will
+NOT be copied to the installation location (there will be a warning), and an attempt to run the
+application will produce a `TokenNotFoundError`. The token will need to be copied manually to
+`${HOME}/.local/opt/wheedle/data` before the application can run.
 
 ## Stopping
 Use ctrl+C or send a TERM signal.
@@ -98,5 +107,5 @@ Use ctrl+C or send a TERM signal.
 ## Troubleshooting
 Error | Possible cause
 ------|---------------
-`TokenNotFoundError` | The GitHub token file was not found. See Requirements above.
 `ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
+`TokenNotFoundError` | The GitHub token file was not found. See Requirements above.
