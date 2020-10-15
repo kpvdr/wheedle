@@ -39,12 +39,13 @@ notification service.
 [Creating a personal access token](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token)
 for instructions on how to do this. Copy the token into a file named `token` which will be located
 in the `DATA_DIR` directory. You can rename this, but make sure to change the configuration
-(see Configuration below) to reflect the new name.
+(see [Configuration](#configuration) below) to reflect the new name.
 
 ## Dependencies
-- Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some repos (such as
-  Fedora) but must be installed using `pip install` on those where this is not the case.
-- Podman (if building or using containers to run Wheedle)
+- Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
+  Fedora) but must be installed using `pip install --user requests` on those where this is not the
+  case.
+- Podman (if building or using containers)
 - Python 3
 
 ## Building and installing
@@ -98,11 +99,11 @@ Install is performed when first running, and is located at `${HOME}/.local/opt/w
 make run
 ```
 However, install can be performed separately by running `make install` first. An alternative install
-location may be specifiec by adding `INSTALL_DIR=/another/path` after each make statement, ie:
+location may be specified by adding `INSTALL_DIR=/another/path` after each make statement, ie:
 ```
-make run INSTALL_DIR=/my/new/PATH
+make run INSTALL_DIR=/my/new/path
 ```
-#### Runnint in a Docker container
+#### Running in a Docker container
 1. First build a container image with `make build-image`. This may take a minute or so to complete.
 1. Once built, the container can be run and stopped as often as needed with `make run-image` and
    `make stop-image`.
@@ -112,10 +113,10 @@ make run INSTALL_DIR=/my/new/PATH
 #### Personal Access Token
 **NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
 an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
-Requirements above). If this variable does not exist, or the token file is not present, then it will
-NOT be copied to the installation location (there will be a warning), and an attempt to run the
-application will produce a `TokenNotFoundError`. The token will need to be copied manually to
-`${HOME}/.local/opt/wheedle/data` before the application can run.
+[Requirements](#requirements above)). If this variable does not exist, or the token file is not
+present, then it will *NOT* be copied to the installation location (there will be a warning), and an
+attempt to run the application will produce a `TokenNotFoundError`. The token will need to be
+copied manually to `${HOME}/.local/opt/wheedle/data` before the application can run.
 
 ## Stopping
 When running using `make run`, use `ctrl+C` or send a `TERM` signal. If running in a container, use
@@ -125,4 +126,4 @@ When running using `make run`, use `ctrl+C` or send a `TERM` signal. If running 
 Error | Possible cause
 ------|---------------
 `ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached from the pollers. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
-`TokenNotFoundError` | The GitHub token file was not found. See Requirements above.
+`TokenNotFoundError` | The GitHub token file was not found. See [Requirements](#requirements) above.
