@@ -44,6 +44,8 @@ def gh_http_get_request(url, auth=None, params=None, content_type='json'):
         return resp.json()
     except _requests.exceptions.ConnectionError:
         raise _errors.GhConnectionRefusedError(url)
+    except _requests.exceptions.HTTPError as err:
+        raise _errors.HttpError('GET', resp, err)
     except _requests.HTTPError:
         raise _errors.HttpError('GET', resp)
 
@@ -54,6 +56,8 @@ def gh_http_post_request(url, auth=None, data=None, json=None, params=None):
     try:
         resp = _requests.post(url, auth=auth, data=data, json=json, params=params)
         resp.raise_for_status()
+    except _requests.exceptions.HTTPError as err:
+        raise _errors.HttpError('GET', resp, err)
     except _requests.HTTPError:
         raise _errors.HttpError('POST', resp)
 
@@ -116,17 +120,14 @@ class GhArtifactItem(MetadataMap):
 
     def download(self, data_dir, auth):
         """ Download artifact to data_dir """
-        try:
-            with _requests.get(self._download_url(), stream=True, auth=auth) as req:
-                req.raise_for_status()
-                artifact_file_name = _fortworth.join(data_dir, self.name() + '.zip')
-                with open(artifact_file_name, 'wb') as artifact_file:
-                    for chunk in req.iter_content(chunk_size=MAX_DOWNLOAD_CHUNK_SIZE):
-                        artifact_file.write(chunk)
-                return self.name()
-            return None
-        except _requests.exceptions.HTTPError as err:
-            raise _errors.HttpError('GET', req)
+        with _requests.get(self._download_url(), stream=True, auth=auth) as req:
+            req.raise_for_status()
+            artifact_file_name = _fortworth.join(data_dir, self.name() + '.zip')
+            with open(artifact_file_name, 'wb') as artifact_file:
+                for chunk in req.iter_content(chunk_size=MAX_DOWNLOAD_CHUNK_SIZE):
+                    artifact_file.write(chunk)
+            return self.name()
+        return None
 
     def _download_url(self):
         return self._metadata['archive_download_url']

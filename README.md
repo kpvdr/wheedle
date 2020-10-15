@@ -42,6 +42,8 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 ## Dependencies
 - Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some repos (such as
   Fedora) but must be installed using `pip install` on those where this is not the case.
+- Podman (if building or using containers to run Wheedle)
+- Python 3
 
 ## Building and installing
 ```

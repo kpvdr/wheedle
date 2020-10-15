@@ -27,5 +27,8 @@ RUN git clone https://github.com/kpvdr/wheedle.git
 WORKDIR wheedle
 RUN mkdir data
 COPY data/token data
-RUN TOKEN_FILE=/build/wheedle/data/token make install
-CMD ["make run"]
+ENV TOKEN_FILE=/build/wheedle/data/token
+RUN make clean uninstall install INSTALL_DIR=/app
+WORKDIR /app
+ENV PYTHONPATH=/app/wheedle
+CMD ["python3",  "-m", "wheedle.app"]

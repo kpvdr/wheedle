@@ -17,9 +17,9 @@
 # under the License.
 #
 
-.EXPORT_ALL_VARIABLES:
-INSTALL_DIR := ${HOME}/.local/opt/wheedle
-_TOKEN_FILE := ${TOKEN_FILE}
+export IMAGE_NAME := wheedle
+export INSTALL_DIR := ${HOME}/.local/opt/wheedle
+export _TOKEN_FILE := ${TOKEN_FILE}
 
 .PHONY: clean
 clean:
@@ -37,10 +37,34 @@ run: install
 uninstall:
 	@scripts/uninstall.sh
 
+.PHONY: build-image
+build-image:
+	@scripts/image.sh build
+
+.PHONY: delete-image
+delete-image:
+	@scripts/image.sh delete
+
+.PHONY: run-image
+run-image:
+	@scripts/image.sh run
+
+.PHONY: stop-image
+stop-image:
+	@scripts/image.sh stop
+
 .PHONY: help
 help:
-	@echo "    clean     - Remove persistent data"
-	@echo "    install   - Install application to ${INSTALL_DIR}"
-	@echo "    run       - Run application"
-	@echo "    uninstall - Uninstall application from ${INSTALL_DIR}"
-	@echo "    help      - Display this help"
+	@echo "Locally run:"
+	@echo "    clean        - Remove persistent data"
+	@echo "    install      - Install application to ${INSTALL_DIR}"
+	@echo "    run          - Run application"
+	@echo "    uninstall    - Uninstall application from ${INSTALL_DIR}"
+	@echo ""
+	@echo "Containers:"
+	@echo "    build-image  - Build the image"
+	@echo "    delete-image - Delete the image"
+	@echo "    run-image    - Run the image in a container"
+	@echo "    stop-image   - Stop the running container"
+	@echo ""
+	@echo "    help         - Display this help"
