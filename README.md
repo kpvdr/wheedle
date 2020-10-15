@@ -1,5 +1,7 @@
 # Wheedle
 
+*wheedle* (v): to influence or entice by soft words or flattery
+
 ## Introduction
 This project independently polls a pair of GitHub repositories, one for for new commits in order to
 trigger a GitHub Action on the second, and the second for new GitHub Actions artifacts.
@@ -53,9 +55,9 @@ No build or install (yet). The application runs using make directly from the rep
 
 ## Configuration
 In the following tables, there are references to two GitHub repositories:
-1. Source repository: The repository containing the source code, and which the *commit poller* polls
-   for new commits;
-2. Build repository: The repository which is triggered by the *commit poller*, and which builds
+1. **Source repository:** The repository containing the source code, and which the *commit poller*
+   polls for new commits;
+2. **Build repository:** The repository which is triggered by the *commit poller*, and which builds
    and tests packages from the source code in the Source Repository. The *artifact poller* will
    check this repository's actions for new artifacts and process them in Bodega and Stagger.
 
@@ -86,16 +88,28 @@ Constant | Description
 `COMMIT_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains *commit poller* persistent data.
 `DEFAULT_LOG_LEVEL` | Log level (one of `DEBUG`, `INFO`, `WARNING`. `ERROR`, `CRITICAL`).
 
-**TODO:** A file-based configuration will be added soon which will allow multiple instances of the artifact
-and commit pollers to run against different repositories.
+**TODO:** A file-based configuration will be added soon which will allow multiple instances of the
+artifact and commit pollers to run against different repositories.
 
 ## Installing and Running
+#### Running in local environment
 Install is performed when first running, and is located at `${HOME}/.local/opt/wheedle`.
 ```
 make run
 ```
-However, install can be performed separately by running `make install` first.
+However, install can be performed separately by running `make install` first. An alternative install
+location may be specifiec by adding `INSTALL_DIR=/another/path` after each make statement, ie:
+```
+make run INSTALL_DIR=/my/new/PATH
+```
+#### Runnint in a Docker container
+1. First build a container image with `make build-image`. This may take a minute or so to complete.
+1. Once built, the container can be run and stopped as often as needed with `make run-image` and
+   `make stop-image`.
+1. An image can be deleted with `make delete-image`. This must be done before a new image can be
+   built.
 
+#### Personal Access Token
 **NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
 an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
 Requirements above). If this variable does not exist, or the token file is not present, then it will
@@ -104,10 +118,11 @@ application will produce a `TokenNotFoundError`. The token will need to be copie
 `${HOME}/.local/opt/wheedle/data` before the application can run.
 
 ## Stopping
-Use ctrl+C or send a TERM signal.
+When running using `make run`, use `ctrl+C` or send a `TERM` signal. If running in a container, use
+`make stop-image`.
 
 ## Troubleshooting
 Error | Possible cause
 ------|---------------
-`ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
+`ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached from the pollers. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
 `TokenNotFoundError` | The GitHub token file was not found. See Requirements above.
