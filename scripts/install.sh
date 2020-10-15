@@ -20,10 +20,12 @@
 #
 
 if [[ ! -e ${INSTALL_DIR}/wheedle/app.py ]]; then
+  mkdir -p ${INSTALL_DIR}/bin
+  cp bin/wheedle ${INSTALL_DIR}/bin/
   mkdir -p ${INSTALL_DIR}/data
-  cp python/*.py ${INSTALL_DIR}/
-  mkdir -p ${INSTALL_DIR}/wheedle
-	cp python/wheedle/*.py ${INSTALL_DIR}/wheedle/
+  mkdir -p ${INSTALL_DIR}/python/wheedle
+  cp python/*.py ${INSTALL_DIR}/python/
+	cp python/wheedle/*.py ${INSTALL_DIR}/python/wheedle/
   if [[ -n ${_TOKEN_FILE} ]]; then
     if [[ -f ${_TOKEN_FILE} ]]; then
       cp ${_TOKEN_FILE} ${INSTALL_DIR}/data/
