@@ -46,8 +46,8 @@ def gh_http_get_request(url, auth=None, params=None, content_type='json'):
         raise _errors.GhConnectionRefusedError(url)
     except _requests.exceptions.HTTPError as err:
         raise _errors.HttpError('GET', resp, err)
-    except _requests.HTTPError:
-        raise _errors.HttpError('GET', resp)
+    # except _requests.HTTPError:
+    #     raise _errors.HttpError('GET', resp)
 
 
 
@@ -58,8 +58,8 @@ def gh_http_post_request(url, auth=None, data=None, json=None, params=None):
         resp.raise_for_status()
     except _requests.exceptions.HTTPError as err:
         raise _errors.HttpError('GET', resp, err)
-    except _requests.HTTPError:
-        raise _errors.HttpError('POST', resp)
+    # except _requests.HTTPError:
+    #     raise _errors.HttpError('POST', resp)
 
 
 
@@ -141,6 +141,7 @@ class GhArtifactItem(MetadataMap):
         """ Return a header to match the output of to_str() """
         return '{:>10}  {:>12}  {:>22}  {:<25}'.format('id', 'size', 'created', 'name')
 
+        # pylint: disable=invalid-name
     def id(self):
         """ Return artifact id """
         return self._metadata['id']
@@ -272,13 +273,14 @@ class GhCommitList(MetadataMap):
 
 class GhRepository(MetadataMap):
     """ GitHub repository metadata as retrieved from GitHub REST API """
-    def __init__(self, metadata, repo_data):
+    def __init__(self, metadata, config, name):
         super().__init__(metadata)
-        self._repo_data = repo_data
+        self._config = config
+        self._name = name
 
-    def auth(self):
-        """ Get repo authorization as a tuple (uid, token) """
-        return self._repo_data.auth
+    # def auth(self):
+    #     """ Get repo authorization as a tuple (uid, token) """
+    #     return self._repo_data.auth
 
     def commit_list(self, since=None, per_page=50, page=0):
         """ Get commit list """
@@ -286,13 +288,14 @@ class GhRepository(MetadataMap):
         if since is not None:
             params['since'] = since
         return GhCommitList(gh_http_get_request( \
-            '{}/repos/{}/{}/commits'.format(self._repo_data.service_url, self._repo_data.owner,
-                                            self._repo_data.name),
-            auth=self._repo_data.auth, params=params))
+            '{}/repos/{}/{}/commits'.format(self._config['GitHub']['service_url'],
+                                            self._config[self._name]['repo_owner'],
+                                            self._config[self._name]['repo_name']),
+            auth=self._config.auth(), params=params))
 
     def full_name(self):
         """ Get repo full name """
-        return self._repo_data.full_name()
+        return _fortworth.join(self.owner(), self.name())
 
     def is_disabled(self):
         """ Return True if repository is disabled, False otherwise """
@@ -300,11 +303,11 @@ class GhRepository(MetadataMap):
 
     def name(self):
         """ Get repo name """
-        return self._repo_data.name
+        return self._config[self._name]['repo_name']
 
     def owner(self):
         """ Get repo owner """
-        return self._repo_data.owner
+        return self._config[self._name]['repo_owner']
 
     def to_str(self):
         """ Return a pretty string used in reporting """
@@ -314,22 +317,23 @@ class GhRepository(MetadataMap):
         """ Get workflow list """
         return GhWorkflowList( \
             gh_http_get_request('{}/repos/{}/{}/actions/runs'.format( \
-                self._repo_data.service_url, self._repo_data.owner, self._repo_data.name),
-                                auth=self._repo_data.auth,
+                self._config['GitHub']['service_url'], self.owner(), self.name()),
+                                auth=self._config.auth(),
                                 params={'accept': 'application/vnd.github.v3+json',
                                         'per_page': 50}),
-            self._repo_data.auth)
+            self._config.auth())
 
     @staticmethod
-    def create_repository(repo_data):
+    def create_repository(config, name):
         """ Static convenience method to create a new instance of GhRepository """
         return GhRepository( \
-            gh_http_get_request('{}/repos/{}/{}'.format(repo_data.service_url, repo_data.owner,
-                                                        repo_data.name),
-                                auth=repo_data.auth,
+            gh_http_get_request('{}/repos/{}/{}'.format(config['GitHub']['service_url'],
+                                                        config[name]['repo_owner'],
+                                                        config[name]['repo_name']),
+                                auth=config.auth(),
                                 params={'accept': 'application/vnd.github.v3+json',
                                         'per_page': 50}),
-            repo_data)
+            config, name)
 
     def __repr__(self):
         return 'GhRepository(full_name={})'.format(self.full_name())

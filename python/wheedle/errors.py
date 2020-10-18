@@ -26,6 +26,14 @@ class PollerError(RuntimeError):
 
 
 
+class ConfigFileError(PollerError):
+    """ Configuration file error(s) """
+
+    def __init__(self, config_file, error_msg):
+        super().__init__('ConfigFileError: {}: {}'.format(config_file, error_msg))
+
+
+
 class ContentTypeError(PollerError):
     """ Error when the returned information is not of type application/json """
 

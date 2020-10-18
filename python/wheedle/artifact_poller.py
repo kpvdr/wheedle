@@ -60,32 +60,32 @@ def remove(path):
 # pylint: disable=too-many-arguments
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
-class ArtifactPollerData:
-    """ Collection of attributes for the artifact poller """
-
-    def __init__(self, source_branch, build_artifact_name_list, bodega_url, stagger_url, tag,
-                 polling_interval, error_polling_interval, data_dir, data_file_name,
-                 last_build_cid_artifact_name):
-        self.source_branch = source_branch
-        self.artifact_name_list = build_artifact_name_list + [last_build_cid_artifact_name]
-        self.bodega_url = bodega_url
-        self.stagger_url = stagger_url
-        self.tag = tag
-        self.polling_interval = polling_interval
-        self.error_polling_interval = error_polling_interval
-        self.data_dir = data_dir
-        self.data_file_name = data_file_name
-        self.last_build_cid_artifact_name = last_build_cid_artifact_name
+# class ArtifactPollerData:
+#     """ Collection of attributes for the artifact poller """
+#
+#     def __init__(self, source_branch, build_artifact_name_list, bodega_url, stagger_url, tag,
+#                  polling_interval, error_polling_interval, data_dir, data_file_name,
+#                  last_build_cid_artifact_name):
+#         self.source_branch = source_branch
+#         self.artifact_name_list = build_artifact_name_list + [last_build_cid_artifact_name]
+#         self.bodega_url = bodega_url
+#         self.stagger_url = stagger_url
+#         self.tag = tag
+#         self.polling_interval = polling_interval
+#         self.error_polling_interval = error_polling_interval
+#         self.data_dir = data_dir
+#         self.data_file_name = data_file_name
+#         self.last_build_cid_artifact_name = last_build_cid_artifact_name
 
 
 
 class ArtifactPoller(_poller.Poller):
     """ Poller which polls for GitHub actions artifacts at a regular interval """
 
-    def __init__(self, repo_data, poller_data):
+    def __init__(self, config, name):
         self._prev_artifact_ids = {} # JSON artifact list from previous poll
         self._next_artifact_ids = {} # JSON artifact list for next poll
-        super().__init__(repo_data, poller_data)
+        super().__init__(config, name)
 
     def poll(self):
         """ Perform poll task. Return True if required services are not running, False otherwise """
@@ -111,30 +111,49 @@ class ArtifactPoller(_poller.Poller):
     def _check_services_running(self):
         """ Check bodega and stagger are running """
         error_list = []
+
         try:
-            build_data = _fortworth.BuildData(self._repo_data.name,
-                                              self._poller_data.source_branch, 0, None)
-            _fortworth.bodega_build_exists(build_data, self._poller_data.bodega_url)
+            build_data = _fortworth.BuildData(self._repo_name(),
+                                              self._source_branch(), 0, None)
+            _fortworth.bodega_build_exists(build_data, self._bodega_url())
         except _requests.exceptions.ConnectionError:
-            error_list.append(_errors.ServiceConnectionError('Bodega',
-                                                             self._poller_data.bodega_url))
+            error_list.append(_errors.ServiceConnectionError('Bodega', self._bodega_url()))
+
         try:
-            _fortworth.stagger_get_data(self._poller_data.stagger_url)
+            _fortworth.stagger_get_data(self._stagger_url())
         except _requests.exceptions.ConnectionError:
-            error_list.append(_errors.ServiceConnectionError('Stagger',
-                                                             self._poller_data.stagger_url))
+            error_list.append(_errors.ServiceConnectionError('Stagger', self._stagger_url()))
         if len(error_list) > 0:
             raise _errors.ErrorList(error_list)
 
+    def _download_artifact(self, artifact, bodega_artifact_list, bodega_temp_dir):
+        try:
+            downloaded_filename = artifact.download(bodega_temp_dir,
+                                                    self._config.auth())
+            if downloaded_filename == self._last_build_hash_file_name():
+                self._process_commit_hash(bodega_temp_dir)
+            bodega_artifact_list.append((artifact, downloaded_filename))
+        except _requests.exceptions.ConnectionError:
+            self._log.warning( \
+                '    %s - ERROR: Bodega not running or invalid Bodega URL %s',
+                artifact.to_str(), format(self._bodega_url()))
+        except _errors.PollerError as err:
+            self._log.warning('    %s - %s', artifact.to_str(), err)
+        else:
+            self._log.info('    %s - ok', artifact.to_str())
+
     def _is_in_bodega(self, wf_item):
         """ Check if a workflow item's run number is in bodega """
-        build_data = _fortworth.BuildData(self._repo.name(), self._poller_data.source_branch,
+        build_data = _fortworth.BuildData(self._repo.name(), self._source_branch(),
                                           wf_item.run_number(), None)
-        return _fortworth.bodega_build_exists(build_data, self._poller_data.bodega_url)
+        return _fortworth.bodega_build_exists(build_data, self._bodega_url())
 
     def _is_needed_artifact(self, artifact_name):
         """ Check if an artifact is in the list of needed artifacts """
-        for needed_artifact in self._poller_data.artifact_name_list:
+        if artifact_name == self._last_build_hash_file_name():
+            return True
+        artifact_list = _fortworth.read_json(self._build_artifact_name_list())
+        for needed_artifact in artifact_list:
             if _fnmatch.fnmatch(artifact_name, needed_artifact):
                 return True
         return False
@@ -152,20 +171,7 @@ class ArtifactPoller(_poller.Poller):
             if self._is_needed_artifact(artifact.name()) and not artifact.expired():
                 if run_number_str not in self._prev_artifact_ids or \
                     artifact.id() not in self._prev_artifact_ids[run_number_str]:
-                    try:
-                        downloaded_filename = artifact.download(bodega_temp_dir,
-                                                                self._repo_data.auth)
-                        if downloaded_filename == self._poller_data.last_build_cid_artifact_name:
-                            self._process_commit_hash(bodega_temp_dir)
-                        bodega_artifact_list.append((artifact, downloaded_filename))
-                    except _requests.exceptions.ConnectionError:
-                        self._log.warning( \
-                            '    %s - ERROR: Bodega not running or invalid Bodega URL %s',
-                            artifact.to_str(), format(self._poller_data.bodega_url))
-                    except _errors.PollerError as err:
-                        self._log.warning('    %s - %s', artifact.to_str(), err)
-                    else:
-                        self._log.info('    %s - ok', artifact.to_str())
+                    self._download_artifact(artifact, bodega_artifact_list, bodega_temp_dir)
                 else:
                     self._log.info('    %s - previously downloaded', artifact.to_str())
                 if run_number_str not in self._next_artifact_ids:
@@ -175,20 +181,16 @@ class ArtifactPoller(_poller.Poller):
             else:
                 self._log.info('    %s - ignored or expired', artifact.to_str())
         if len(bodega_artifact_list) > 0:
-            try:
-                bodega_artifact_path = self._push_to_bodega(wf_item, bodega_temp_dir)
-                self._push_to_stagger(wf_item, bodega_artifact_list, bodega_artifact_path)
-            except _requests.exceptions.ConnectionError:
-                self._log.error('Stagger not running or invalid Bodega URL %s',
-                                self._poller_data.stagger_url)
+            bodega_artifact_path = self._push_to_bodega(wf_item, bodega_temp_dir)
+            self._push_to_stagger(wf_item, bodega_artifact_list, bodega_artifact_path)
         remove(bodega_temp_dir)
 
     def _process_commit_hash(self, bodega_temp_dir):
         """ Extract zipped commit-id json file into data dir """
         zip_file_name = _fortworth.join(bodega_temp_dir,
-                                        self._poller_data.last_build_cid_artifact_name + '.zip')
+                                        self._last_build_hash_file_name() + '.zip')
         with _zipfile.ZipFile(zip_file_name, 'r') as zip_obj:
-            zip_obj.extractall(path=self._poller_data.data_dir)
+            zip_obj.extractall(path=self._config.data_dir())
 
     def _process_workflow_list(self, workflow_list):
         """ Find artifacts in each workflow that is not already in Bodega """
@@ -207,18 +209,23 @@ class ArtifactPoller(_poller.Poller):
                                 self._prev_artifact_ids[run_number_str]
                 except _requests.exceptions.ConnectionError:
                     self._log.warning('    %s - Bodega not running or invalid Bodega URL %s',
-                                      wf_item.to_str(), self._poller_data.bodega_url)
+                                      wf_item.to_str(), self._bodega_url())
             else:
                 self._log.info('    %s', wf_item.to_str())
 
     def _push_to_bodega(self, wf_item, bodega_temp_dir):
         """ Push an artifact to Bodega """
-        build_data = _fortworth.BuildData(self._repo_data.name, self._poller_data.source_branch,
+        build_data = _fortworth.BuildData(self._repo_name(), self._source_branch(),
                                           wf_item.run_number(), wf_item.html_url())
-        _fortworth.bodega_put_build(bodega_temp_dir, build_data,
-                                    service_url=self._poller_data.bodega_url)
-        return _fortworth.join(self._poller_data.bodega_url, build_data.repo, build_data.branch,
-                               str(build_data.id))
+        try:
+            _fortworth.bodega_put_build(bodega_temp_dir, build_data,
+                                        service_url=self._bodega_url())
+            return _fortworth.join(self._bodega_url(), build_data.repo, build_data.branch,
+                                   str(build_data.id))
+        except _requests.exceptions.ConnectionError:
+            self._log.error('Bodega not running or invalid Bodega URL %s',
+                            self._config['Local']['stagger_url'])
+
 
     def _push_to_stagger(self, workflow_metadata, bodega_artifact_list, bodega_artifact_path):
         """ Tag an artifact in Stagger """
@@ -236,38 +243,56 @@ class ArtifactPoller(_poller.Poller):
                     'commit_url': None,
                     'artifacts': stagger_artifact_list,
                    }
-        _fortworth.stagger_put_tag(self._repo_data.name, self._poller_data.source_branch,
-                                   self._poller_data.tag, tag_data,
-                                   service_url=self._poller_data.stagger_url)
+        try:
+            _fortworth.stagger_put_tag(self._repo_name(), self._source_branch(),
+                                       self._stagger_tag(), tag_data,
+                                       service_url=self._config['Local']['stagger_url'])
+        except _requests.exceptions.ConnectionError:
+            self._log.error('Stagger not running or invalid Bodega URL %s',
+                            self._config['Local']['stagger_url'])
 
     def _read_data(self):
         """ Read the persistent data for this poller """
-        data_file_name = _fortworth.join(self._poller_data.data_dir,
-                                         self._poller_data.data_file_name)
-        if _fortworth.exists(data_file_name):
+        if _fortworth.exists(self._data_file_name()):
             try:
-                self._prev_artifact_ids = _fortworth.read_json(data_file_name)
+                self._prev_artifact_ids = _fortworth.read_json(self._data_file_name())
             except  _json.decoder.JSONDecodeError as err:
-                raise _errors.JsonDecodeError(data_file_name, err)
+                raise _errors.JsonDecodeError(self._data_file_name(), err)
 
     def _write_data(self):
         """ Write the persistent data for this poller """
-        data_file_name = _fortworth.join(self._poller_data.data_dir,
-                                         self._poller_data.data_file_name)
-        _fortworth.write_json(data_file_name, self._next_artifact_ids)
+        _fortworth.write_json(self._data_file_name(), self._next_artifact_ids)
         self._prev_artifact_ids = self._next_artifact_ids
         self._next_artifact_ids = {}
 
+    # Configuration convenience methods
+
+    def _bodega_url(self):
+        return self._poller_config()['bodega_url']
+
+    def _build_artifact_name_list(self):
+        return self._poller_config()['build_artifact_name_list']
+
+    def _last_build_hash_file_name(self):
+        return self._poller_config()['last_build_hash_file_name']
+
+    def _repo_name(self):
+        return self._poller_config()['repo_name']
+
+    def _stagger_tag(self):
+        return self._poller_config()['stagger_tag']
+
+    def _stagger_url(self):
+        return self._poller_config()['stagger_url']
+
     @staticmethod
-    def run(repo_data, poller_data):
+    def run(config, name):
         """ Convenience method to run the ArtifactPoller on a scheduler """
         LOG.info('Starting artifact poller...')
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
-            artifact_poller = ArtifactPoller(repo_data, poller_data)
-            sch.enter(0, 1, artifact_poller.start, (poller_data.polling_interval,
-                                                    poller_data.error_polling_interval,
-                                                    sch, ))
+            artifact_poller = ArtifactPoller(config, name)
+            sch.enter(0, 1, artifact_poller.start, (sch, ))
             sch.run()
         except (_errors.PollerError, _json.decoder.JSONDecodeError) as err:
             LOG.error(err)

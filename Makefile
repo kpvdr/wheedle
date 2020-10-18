@@ -31,7 +31,7 @@ install:
 
 .PHONY: run
 run: install
-	cd ${INSTALL_DIR}; python3 -m wheedle.app
+	@cd ${INSTALL_DIR}; ./bin/wheedle
 
 .PHONY: uninstall
 uninstall:

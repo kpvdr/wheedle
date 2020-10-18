@@ -25,6 +25,7 @@ Common classes used by the various pollers.
 import abc as _abc
 import logging as _logging
 
+import fortworth as _fortworth
 import wheedle.errors as _errors
 import wheedle.gh_api as _gh_api
 
@@ -33,26 +34,41 @@ import wheedle.gh_api as _gh_api
 class Poller:
     """ Parent class for pollers that polls a GitHub repository for events or artifacts """
 
-    def __init__(self, repo_data, poller_data):
-        self._repo_data = repo_data
-        self._poller_data = poller_data
-        self._repo = _gh_api.GhRepository.create_repository(repo_data)
-        self._log = _logging.getLogger(self.__class__.__name__)
+    # def __init__(self, repo_data, poller_data):
+    #     self._repo_data = repo_data
+    #     self._poller_data = poller_data
+    def __init__(self, config, name):
+        self._config = config
+        self._name = name
+        self._repo = _gh_api.GhRepository.create_repository(config, name)
+        self._log = _logging.getLogger('self.__class__.__name__.{}'.format(name))
         if self._repo.is_disabled():
-            raise _errors.DisabledRepoError(self._repo_data.full_name())
+            raise _errors.DisabledRepoError(self._config.full_name())
         self._read_data()
 
-    def start(self, polling_interval, error_polling_interval=None, sch=None):
+    def start(self, sch=None):
         """ Start poller """
-        if self.poll() and error_polling_interval is not None:
-            next_polling_interval = error_polling_interval
-        else:
-            next_polling_interval = polling_interval
+        next_polling_interval = self._polling_interval_secs(self.poll())
         if sch is not None:
             self._log.info('Waiting for next poll in %d secs...', next_polling_interval)
-            sch.enter(next_polling_interval, 1, self.start, (polling_interval,
-                                                             error_polling_interval,
-                                                             sch, ))
+            sch.enter(next_polling_interval, 1, self.start, (sch, ))
+
+    # Some common configuration value convenience methods
+
+    def _data_file_name(self):
+        return _fortworth.join(self._config.data_dir(), self._poller_config()['data_file_name'])
+
+    def _poller_config(self):
+        """ Config for this poller """
+        return self._config[self._name]
+
+    def _polling_interval_secs(self, error_flag):
+        if error_flag:
+            return int(self._poller_config()['error_polling_interval_secs'])
+        return int(self._poller_config()['polling_interval_secs'])
+
+    def _source_branch(self):
+        return self._poller_config()['source_branch']
 
     @_abc.abstractmethod
     def poll(self):

@@ -45,7 +45,8 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 - Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
   Fedora) but must be installed using `pip install --user requests` on those where this is not the
   case.
-- Podman (if building or using containers)
+- Podman (https://podman.io/) - Packaged on most distros. This is needed if building or using
+  containers
 - Python 3
 
 ## Building and installing
@@ -92,7 +93,7 @@ Constant | Description
 **TODO:** A file-based configuration will be added soon which will allow multiple instances of the
 artifact and commit pollers to run against different repositories.
 
-## Installing and Running
+## Installing, Running and Stopping
 #### Running in local environment
 Install is performed when first running, and is located at `${HOME}/.local/opt/wheedle`.
 ```
@@ -103,24 +104,39 @@ location may be specified by adding `INSTALL_DIR=/another/path` after each make 
 ```
 make run INSTALL_DIR=/my/new/path
 ```
+To stop, use `ctrl+C` or send a `TERM` signal.
+
 #### Running in a Docker container
+The container uses the latest version of Fedora.
+
 1. First build a container image with `make build-image`. This may take a minute or so to complete.
 1. Once built, the container can be run and stopped as often as needed with `make run-image` and
-   `make stop-image`.
+   `make stop-image` respectively.
 1. An image can be deleted with `make delete-image`. This must be done before a new image can be
    built.
 
 #### Personal Access Token
 **NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
 an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
-[Requirements](#requirements above)). If this variable does not exist, or the token file is not
+[Requirements](#requirements) above). If this variable does not exist, or the token file is not
 present, then it will *NOT* be copied to the installation location (there will be a warning), and an
 attempt to run the application will produce a `TokenNotFoundError`. The token will need to be
-copied manually to `${HOME}/.local/opt/wheedle/data` before the application can run.
+copied manually to `${HOME}/.local/opt/wheedle/data` (or `${INSTALL_DIR}/data` if you specified a
+different install directory) before the application can run.
 
-## Stopping
-When running using `make run`, use `ctrl+C` or send a `TERM` signal. If running in a container, use
-`make stop-image`.
+## Persistent Data
+Persistent data which is re-loaded each time the application is started, is saved in `DATA_DIR`
+(`${HOME}/.local/opt/wheedle` by default).
+
+Persistent data may be cleared by deleting the JSON files (`*.json`) in `DATA_DIR`, or by running
+`make clean`. **WARNING:** Do not delete the Personal Access Token file `token` which is also
+located in this directory. The application will not run without this file.
+
+## Persistence Files
+Name | Type | Description
+-----|------|------------
+artifact_id.json | JSON | A list of artifact ids previously seen indexed by run number.
+commit_hash.json | JSON | The commit hash of the last build. This is uploaded as an artifact.
 
 ## Troubleshooting
 Error | Possible cause
