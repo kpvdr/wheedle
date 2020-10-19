@@ -34,14 +34,11 @@ import wheedle.gh_api as _gh_api
 class Poller:
     """ Parent class for pollers that polls a GitHub repository for events or artifacts """
 
-    # def __init__(self, repo_data, poller_data):
-    #     self._repo_data = repo_data
-    #     self._poller_data = poller_data
     def __init__(self, config, name):
         self._config = config
         self._name = name
         self._repo = _gh_api.GhRepository.create_repository(config, name)
-        self._log = _logging.getLogger('self.__class__.__name__.{}'.format(name))
+        self._log = _logging.getLogger('{}.{}'.format(self.__class__.__name__, name))
         if self._repo.is_disabled():
             raise _errors.DisabledRepoError(self._config.full_name())
         self._read_data()

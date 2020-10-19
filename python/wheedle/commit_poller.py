@@ -43,33 +43,24 @@ LOG = _logging.getLogger('CommitPoller')
 
 
 
-# pylint: disable=too-many-arguments
-# pylint: disable=too-few-public-methods
-# class CommitPollerData:
-#     """ Collection of attributes for the artifact poller """
-#
-#     def __init__(self, build_repo_owner, build_repo_name, source_branch, polling_interval,
-#                  data_dir, last_trigger_file_name, last_build_cid_artifact_name):
-#         self.build_repo_owner = build_repo_owner
-#         self.build_repo_name = build_repo_name
-#         self.source_branch = source_branch
-#         self.polling_interval = polling_interval
-#         self.data_dir = data_dir
-#         self.last_trigger_file_name = last_trigger_file_name
-#         self.last_build_cid_artifact_name = last_build_cid_artifact_name
-
-
-
 class CommitPoller(_poller.Poller):
     """ Poller which polls for new commits in a GitHub repository at a regular interval """
 
     def __init__(self, config, name):
         self._last_build_commit_hash = None
+        self._first_entry = True
         self._data = {}
         super().__init__(config, name)
 
     def poll(self):
         """ Read commits from source repository, compare with last commit id of build """
+        # Delay start of commit poller on the first poll so that the artifact poller can
+        # retrieve the last commit hash
+        if self._first_entry:
+            self._log.info('Initial delay: {} secs...'.format(self._start_delay_secs()))
+            self._first_entry = False
+            _time.sleep(self._start_delay_secs())
+
         # Read last commit hash file, it might have been updated since last poll
         self._read_last_commit_hash()
 
@@ -109,7 +100,9 @@ class CommitPoller(_poller.Poller):
                 self._log.info('  %s', commit)
             self._trigger_build()
         else:
-            self._log.info('No commits since last build trigger')
+            self._log.info('No commits since last build')
+
+        self._write_data()
         return False
 
     def _read_data(self):
@@ -123,8 +116,10 @@ class CommitPoller(_poller.Poller):
 
     def _read_last_commit_hash(self):
         """ Read the commit hash of any previous build that might have been made """
+        last_commit_file_base_name = '{}.{}.json'.format(self._tap_last_build_hash_file_name(),
+                                                         self._tap_name())
         last_commit_file_name = _fortworth.join(self._config.data_dir(),
-                                                self._tap_last_build_hash_file_name())
+                                                last_commit_file_base_name)
         if _fortworth.exists(last_commit_file_name):
             last_build_commit = _fortworth.read_json(last_commit_file_name)
             self._last_build_commit_hash = last_build_commit['commit-hash']
@@ -135,13 +130,13 @@ class CommitPoller(_poller.Poller):
 
     def _trigger_build(self):
         """ Trigger a GitHub action """
-        _gh_api.gh_http_post_request( \
-            '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
-                                            self._tap_full_name()),
-            auth=self._config.auth(),
-            params={'accept': 'application/vnd.github.v3+json'},
-            json={'event_type': 'trigger-action'})
-        self._log.info('Build triggered on "%s"', self._tap_full_name())
+        # _gh_api.gh_http_post_request( \
+        #     '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
+        #                                     self._tap_full_name()),
+        #     auth=self._config.auth(),
+        #     params={'accept': 'application/vnd.github.v3+json'},
+        #     json={'event_type': 'trigger-action'})
+        # self._log.info('Build triggered on "%s"', self._tap_full_name())
 
     def _write_data(self):
         """ Write the persistent data for this poller """
@@ -156,7 +151,7 @@ class CommitPoller(_poller.Poller):
         return int(self._poller_config()['start_delay_secs'])
 
     def _tap_config(self):
-        return self._config[self._poller_config()['trigger_artifact_poller']]
+        return self._config[self._tap_name()]
 
     def _tap_full_name(self):
         return _fortworth.join(self._tap_config()['repo_owner'],
@@ -165,10 +160,13 @@ class CommitPoller(_poller.Poller):
     def _tap_last_build_hash_file_name(self):
         return self._tap_config()['last_build_hash_file_name']
 
+    def _tap_name(self):
+        return self._poller_config()['trigger_artifact_poller']
+
     @staticmethod
     def run(config, name):
         """ Convenience method to run the CommitPoller on a scheduler """
-        LOG.info('Starting commit poller...')
+        LOG.info('Starting commit poller {}...'.format(name))
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
             commit_poller = CommitPoller(config, name)

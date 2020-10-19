@@ -20,10 +20,11 @@
 #
 
 if [[ ! -e ${INSTALL_DIR}/wheedle/app.py ]]; then
+  mkdir -p ${INSTALL_DIR}
+  cp wheedle.conf ${INSTALL_DIR}/
   mkdir -p ${INSTALL_DIR}/bin
   cp bin/wheedle ${INSTALL_DIR}/bin/
   mkdir -p ${INSTALL_DIR}/data
-  cp data/wheedle.conf ${INSTALL_DIR}/data
   mkdir -p ${INSTALL_DIR}/python/wheedle
   cp python/*.py ${INSTALL_DIR}/python/
 	cp python/wheedle/*.py ${INSTALL_DIR}/python/wheedle/

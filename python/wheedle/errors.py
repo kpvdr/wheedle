@@ -133,5 +133,5 @@ class TokenNotFoundError(PollerError):
     """ Error if GitHub token not found """
 
     def __init__(self, token_file_name):
-        super().__init__('TokenNotFoundError: GitHub token file not found at {}'.format( \
+        super().__init__('TokenNotFoundError: GitHub token "{}" file not found'.format( \
             token_file_name))

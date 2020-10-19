@@ -57,28 +57,6 @@ def remove(path):
 
 
 
-# pylint: disable=too-many-arguments
-# pylint: disable=too-few-public-methods
-# pylint: disable=too-many-instance-attributes
-# class ArtifactPollerData:
-#     """ Collection of attributes for the artifact poller """
-#
-#     def __init__(self, source_branch, build_artifact_name_list, bodega_url, stagger_url, tag,
-#                  polling_interval, error_polling_interval, data_dir, data_file_name,
-#                  last_build_cid_artifact_name):
-#         self.source_branch = source_branch
-#         self.artifact_name_list = build_artifact_name_list + [last_build_cid_artifact_name]
-#         self.bodega_url = bodega_url
-#         self.stagger_url = stagger_url
-#         self.tag = tag
-#         self.polling_interval = polling_interval
-#         self.error_polling_interval = error_polling_interval
-#         self.data_dir = data_dir
-#         self.data_file_name = data_file_name
-#         self.last_build_cid_artifact_name = last_build_cid_artifact_name
-
-
-
 class ArtifactPoller(_poller.Poller):
     """ Poller which polls for GitHub actions artifacts at a regular interval """
 
@@ -152,7 +130,7 @@ class ArtifactPoller(_poller.Poller):
         """ Check if an artifact is in the list of needed artifacts """
         if artifact_name == self._last_build_hash_file_name():
             return True
-        artifact_list = _fortworth.read_json(self._build_artifact_name_list())
+        artifact_list = _fortworth.parse_json(self._build_artifact_name_list())
         for needed_artifact in artifact_list:
             if _fnmatch.fnmatch(artifact_name, needed_artifact):
                 return True
@@ -187,10 +165,13 @@ class ArtifactPoller(_poller.Poller):
 
     def _process_commit_hash(self, bodega_temp_dir):
         """ Extract zipped commit-id json file into data dir """
-        zip_file_name = _fortworth.join(bodega_temp_dir,
-                                        self._last_build_hash_file_name() + '.zip')
-        with _zipfile.ZipFile(zip_file_name, 'r') as zip_obj:
-            zip_obj.extractall(path=self._config.data_dir())
+        file_name_base = _fortworth.join(bodega_temp_dir, self._last_build_hash_file_name())
+        with _zipfile.ZipFile(file_name_base + '.zip', 'r') as zip_obj:
+            zip_obj.extractall(path=bodega_temp_dir)
+        target_file_name = _fortworth.join(self._config.data_dir(),
+                                           '{}.{}.json'.format(self._last_build_hash_file_name(),
+                                                               self._name))
+        _shutil.copyfile(file_name_base + '.json', target_file_name)
 
     def _process_workflow_list(self, workflow_list):
         """ Find artifacts in each workflow that is not already in Bodega """
@@ -246,10 +227,9 @@ class ArtifactPoller(_poller.Poller):
         try:
             _fortworth.stagger_put_tag(self._repo_name(), self._source_branch(),
                                        self._stagger_tag(), tag_data,
-                                       service_url=self._config['Local']['stagger_url'])
+                                       service_url=self._stagger_url())
         except _requests.exceptions.ConnectionError:
-            self._log.error('Stagger not running or invalid Bodega URL %s',
-                            self._config['Local']['stagger_url'])
+            self._log.error('Stagger not running or invalid Bodega URL %s', self._stagger_url())
 
     def _read_data(self):
         """ Read the persistent data for this poller """
@@ -288,7 +268,7 @@ class ArtifactPoller(_poller.Poller):
     @staticmethod
     def run(config, name):
         """ Convenience method to run the ArtifactPoller on a scheduler """
-        LOG.info('Starting artifact poller...')
+        LOG.info('Starting artifact poller %s...', name)
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
             artifact_poller = ArtifactPoller(config, name)
