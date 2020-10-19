@@ -57,9 +57,11 @@ class CommitPoller(_poller.Poller):
         # Delay start of commit poller on the first poll so that the artifact poller can
         # retrieve the last commit hash
         if self._first_entry:
-            self._log.info('Initial delay: {} secs...'.format(self._start_delay_secs()))
             self._first_entry = False
-            _time.sleep(self._start_delay_secs())
+            delay = self._start_delay_secs()
+            if delay is not None and delay > 0:
+                self._log.info('Initial delay: %d secs...', self._start_delay_secs())
+                _time.sleep(self._start_delay_secs())
 
         # Read last commit hash file, it might have been updated since last poll
         self._read_last_commit_hash()
@@ -147,9 +149,6 @@ class CommitPoller(_poller.Poller):
     def _repo_name(self):
         return self._poller_config()['repo_name']
 
-    def _start_delay_secs(self):
-        return int(self._poller_config()['start_delay_secs'])
-
     def _tap_config(self):
         return self._config[self._tap_name()]
 
@@ -166,7 +165,7 @@ class CommitPoller(_poller.Poller):
     @staticmethod
     def run(config, name):
         """ Convenience method to run the CommitPoller on a scheduler """
-        LOG.info('Starting commit poller {}...'.format(name))
+        LOG.info('Starting commit poller %s...', name)
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
             commit_poller = CommitPoller(config, name)

@@ -67,6 +67,12 @@ class Poller:
     def _source_branch(self):
         return self._poller_config()['source_branch']
 
+    def _start_delay_secs(self):
+        # Optional, may not be present in config
+        if 'start_delay_secs' not in self._poller_config():
+            return None
+        return int(self._poller_config()['start_delay_secs'])
+
     @_abc.abstractmethod
     def poll(self):
         """ Perform poll task  """

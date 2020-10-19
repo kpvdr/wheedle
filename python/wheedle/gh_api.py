@@ -439,3 +439,6 @@ class GhWorkflowList(MetadataMap):
 
     def __repr__(self):
         return 'GhWorkflowList(num_workflows={})'.format(len(self._wf_item_list))
+
+    def __reversed__(self):
+        return reversed(sorted(self._wf_item_list))

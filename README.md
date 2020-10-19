@@ -42,12 +42,12 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 (see [Configuration](#configuration) below) to reflect the new name.
 
 ## Dependencies
-- Requests (https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
+- **Requests** (https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
   Fedora) but must be installed using `pip install --user requests` on those where this is not the
   case.
-- Podman (https://podman.io/) - Packaged on most distros. This is needed if building or using
+- **Podman** (https://podman.io/) - Packaged on most distros. This is needed if building or using
   containers
-- Python 3
+- **Python 3**
 
 ## Building and installing
 ```

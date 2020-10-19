@@ -51,8 +51,6 @@ class Application:
     def run(self):
         """ Run the application. This starts one each of the builder and commit pollers """
         try:
-            # self._start_pollers(['rh-qpid-proton-dist-win-1'])
-            # self._start_pollers(['qpid-proton-1'])
             self._start_pollers(self._config.artifact_poller_names())
             self._start_pollers(self._config.commit_poller_names())
 
@@ -81,14 +79,14 @@ class Application:
         """ Start the artifact poller """
         artifact_poller_process = _mp.Process(target=_apoller.ArtifactPoller.run,
                                               args=(self._config, name),
-                                              name='ArtifactPollerProcess')
+                                              name='{}-process'.format(name))
         artifact_poller_process.start()
         self._process_list.append(artifact_poller_process)
 
     def _start_commit_poller(self, name):
         commit_poller_process = _mp.Process(target=_cpoller.CommitPoller.run,
                                             args=(self._config, name),
-                                            name='CommitPollerProcess')
+                                            name='{}-process'.format(name))
         commit_poller_process.start()
         self._process_list.append(commit_poller_process)
 

@@ -63,10 +63,18 @@ class ArtifactPoller(_poller.Poller):
     def __init__(self, config, name):
         self._prev_artifact_ids = {} # JSON artifact list from previous poll
         self._next_artifact_ids = {} # JSON artifact list for next poll
+        self._first_entry = True
         super().__init__(config, name)
 
     def poll(self):
         """ Perform poll task. Return True if required services are not running, False otherwise """
+        if self._first_entry:
+            self._first_entry = False
+            delay = self. _start_delay_secs()
+            if delay is not None and delay > 0:
+                self._log.info('Initial delay: %d secs...', self._start_delay_secs())
+                _time.sleep(self._start_delay_secs())
+
         # Check if Bodega and Stagger are running
         try:
             self._check_services_running()
@@ -175,6 +183,19 @@ class ArtifactPoller(_poller.Poller):
 
     def _process_workflow_list(self, workflow_list):
         """ Find artifacts in each workflow that is not already in Bodega """
+        # Limit number of items with artifacts if needed
+        download_limit = self._build_download_limit()
+        if download_limit is not None and len(workflow_list) > download_limit:
+            limited_wf_list = []
+            cnt = 0
+            for wf_item in reversed(workflow_list):
+                limited_wf_list.append(wf_item)
+                if wf_item.has_artifacts():
+                    cnt += 1
+                if cnt >= download_limit:
+                    break
+            workflow_list = reversed(limited_wf_list)
+
         for wf_item in workflow_list:
             if wf_item.has_artifacts():
                 try:
@@ -252,6 +273,12 @@ class ArtifactPoller(_poller.Poller):
 
     def _build_artifact_name_list(self):
         return self._poller_config()['build_artifact_name_list']
+
+    def _build_download_limit(self):
+        # Optional config, return None if not present
+        if 'build_download_limit' not in self._poller_config():
+            return None
+        return int(self._poller_config()['build_download_limit'])
 
     def _last_build_hash_file_name(self):
         return self._poller_config()['last_build_hash_file_name']
