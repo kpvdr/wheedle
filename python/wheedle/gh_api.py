@@ -388,12 +388,10 @@ class GhWorkflowItem(MetadataMap):
         if (self.status() != 'completed' or self.conclusion() != 'success') and num_artifacts == 0:
             return 'Run #{} updated {}: {}:{}'.format(self.run_number(), self.updated_at(),
                                                       self.status(), self.conclusion())
-        if num_artifacts == 0:
+        if num_artifacts == 0 or num_artifacts >= 2:
             suffix = 's'
-        elif num_artifacts == 1:
-            suffix = ':'
-        else:
-            suffix = 's:'
+        if self.has_artifacts():
+            suffix = suffix + ':'
         return 'Run #{} updated {}: {}:{} containing {} artifact{}'.format( \
             self.run_number(), self.updated_at(), self.status(), self.conclusion(),
             len(self._artifact_list), suffix)

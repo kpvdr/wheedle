@@ -138,7 +138,7 @@ class CommitPoller(_poller.Poller):
         #     auth=self._config.auth(),
         #     params={'accept': 'application/vnd.github.v3+json'},
         #     json={'event_type': 'trigger-action'})
-        # self._log.info('Build triggered on "%s"', self._tap_full_name())
+        self._log.info('Build triggered on "%s"', self._tap_full_name())
 
     def _write_data(self):
         """ Write the persistent data for this poller """

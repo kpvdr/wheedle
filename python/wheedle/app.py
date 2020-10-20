@@ -49,7 +49,7 @@ class Application:
         self._log.info('Data directory: %s', self._config.data_dir())
 
     def run(self):
-        """ Run the application. This starts one each of the builder and commit pollers """
+        """ Run the application. This starts each of the configured artifact and commit pollers """
         try:
             self._start_pollers(self._config.artifact_poller_names())
             self._start_pollers(self._config.commit_poller_names())
@@ -76,7 +76,7 @@ class Application:
                     'Poller {}: Unknown poller class "{}"'.format(poller_name, poller_class))
 
     def _start_artifact_poller(self, name):
-        """ Start the artifact poller """
+        """ Start the named artifact poller """
         artifact_poller_process = _mp.Process(target=_apoller.ArtifactPoller.run,
                                               args=(self._config, name),
                                               name='{}-process'.format(name))
@@ -84,6 +84,7 @@ class Application:
         self._process_list.append(artifact_poller_process)
 
     def _start_commit_poller(self, name):
+        """ Start the named commit poller """
         commit_poller_process = _mp.Process(target=_cpoller.CommitPoller.run,
                                             args=(self._config, name),
                                             name='{}-process'.format(name))
