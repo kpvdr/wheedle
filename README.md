@@ -56,8 +56,8 @@ make install
 ```
 
 ## Configuration
-Configuration is by a text configuration file (by default `wheedle.conf`), and is formatted as
-follows:
+Configuration is by a text configuration file (by default `wheedle.conf` in the home directory),
+and is formatted as follows:
 ```
 [section1]
 key1 = value1
@@ -74,13 +74,13 @@ See [Supported INI File Structure](https://docs.python.org/3/library/configparse
 in the Python 3 documentation for complete details.
 
 In the following tables, there are references to two GitHub repositories:
- - **Source repository:** The repository containing the source code, and which the *commit poller*
+ - **Source repository:** The repository containing the source code, and which the ***commit poller***
    polls for new commits;
  - **Build repository:** The repository which is triggered by the *commit poller*, and which builds
-   and tests packages from the source code in the Source Repository. The *artifact poller* will
+   and tests packages from the source code in the Source Repository. The ***artifact poller*** will
    check this repository's actions for new artifacts and process them in Bodega and Stagger.
 
-### Configuration File Sections
+#### Configuration File Sections
 The following sections are defined by wheedle:
 | Section Name | Required | Description |
 | --- | :---: | --- |
@@ -88,30 +88,29 @@ The following sections are defined by wheedle:
 | `GitHub` | Y | GitHub configuration |
 | `Logging` | Y | Logging configuration |
 | `DEFAULT` | | Optional section which sets default values for all following poller sections. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections. **NOTE:** This section MUST appear above the poller sections. |
-| `[<poller-name>]` | Section which describes a poller. Any section name not used above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller. |
+| `[<poller-name>]` | | Section which describes a poller. Any section name not used above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller. |
 
-### `Local` Section
+#### `Local` Section
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `Local` | | Y | Local server configuration |
 | `data_dir` | Y | Name of data directory relative to the home directory. Default: `data` |
 
-### `GitHub` Section
+#### `GitHub` Section
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `api_auth_uid` | Y | Authorization ID associated with the token. See [Requirements](requirements) above. |
-| `gh_api_token_file_name`| Y | Name of file containing token in the data directory. See [Requirements](requirements) above. |
+| `api_auth_uid` | Y | Authorization ID associated with the token. See [Requirements](#requirements) above. |
+| `gh_api_token_file_name`| Y | Name of file containing token in the data directory. See [Requirements](#requirements) above. |
 | `service_url` | Y | Service URL for the GitHub API. |
 
-### `Logging` Section
+#### `Logging` Section
 | Key Name | Required | Description |
 | --- | :---: | --- |
 | `default_log_level` | Y | Logging level, one of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`, `NOTSSET`. Default: `INFO`. See [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) in the Python 3 documentation. |
 
-### `DEFAULT` Section
-Optional section which sets default values for all following poller sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections. Typically included values which apply to both ArtifactPollers and CommitPollers are `polling_interval_secs`, `error_polling_interval_secs` and `source_branch`. See below for descriptions of these keys.
+#### `DEFAULT` Section
+Optional section which sets default values for all following poller sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections. Typically included values which apply to both ArtifactPollers and CommitPollers are `polling_interval_secs`, `error_polling_interval_secs` and `source_branch`. See (Poller Section)[#poller-section] below for descriptions of these keys. **NOTE:** This section must be placed *above* the poller sections.
 
-### Poller Section
+#### Poller Section
 Section which describes a poller. Any section name not described above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller.
 | Key Name | Required | Description |
 | --- | :---: | --- |
@@ -124,18 +123,18 @@ Section which describes a poller. Any section name not described above is valid.
 | `error_polling_interval_secs` | Y | Polling interval in seconds when a service error exists. This is typically the unavailability of services such as Stagger and Bodega for Artifact pollers. As long as these services are not available, this polling interval is used until service is restored. This allows for an error condition to be corrected without having to wait hours before another poll takes place. This value is typically included in the `DEFAULT` section if several pollers share the same error polling interval. |
 | `source_branch` | Y | Default Git source branch. This is used for tagging and commit polling. This value is typically included in the `DEFAULT` section if several pollers use the same source branch. |
 
-### Artifact Pollers
+#### Artifact Pollers
 The following keys are for artifact pollers only:
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `build_artifact_name_list` | Y | JSON list of artifacts which will be downloaded from GitHub. Wildcard `*` is valid. Those artifacts not matching this list will be ignored. |
+| `build_artifact_name_list` | Y | JSON list of artifacts which will be downloaded from GitHub. Wildcard `*` is valid. Those artifacts not matching this list will be ignored. Example: `[my-file, py*-install]`  **NOTE:** The `last_build_hash_file_name` is also downloaded, but is not set here but in its own section `last_build_hash_file_name`. |
 | `last_build_hash_file_name` | Y | Name of artifact containing the last commit hash. This is in addition to the files listed in `build_artifact_name_list` above. |
 | `stagger_tag` | Y | The tag which will be used to tag this artifact in Stagger. Usually `untested` or `tested`. |
 | `bodega_url` | Y | URL of the Bodega file archive service. Must be reachable on the network from the wheedle server. |
 | `stagger_url` | Y | URL of the Stagger file tagging service. Must be reachable on the network from the wheedle server. |
 | `build_download_limit` | | Optional limit on the number of workflows to download. The artifact poller will identify the last 50 workflows and will download all those containing artifacts in chronological order (which is usually by order of the run number). However, this can result in an excessive number of artifact downloads for older workflows. If this limit is set, then the poller will identify this number of successful workflows, and will start downloading from that workflow. |
 
-### Commit Pollers
+#### Commit Pollers
 The following keys are for commit pollers only:
 | Key Name | Required | Description |
 | --- | :---: | --- |
