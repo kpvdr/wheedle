@@ -63,20 +63,13 @@ class ArtifactPoller(_poller.Poller):
     def __init__(self, config, name):
         self._prev_artifact_ids = {} # JSON artifact list from previous poll
         self._next_artifact_ids = {} # JSON artifact list for next poll
-        self._first_entry = True
         super().__init__(config, name)
 
     def poll(self):
+        self._initial_delay()
         """ Perform poll task. Return True if required services are not running, False otherwise """
-        if self._first_entry:
-            self._first_entry = False
-            delay = self. _start_delay_secs()
-            if delay is not None and delay > 0:
-                self._log.info('Initial delay: %d secs...', self._start_delay_secs())
-                _time.sleep(self._start_delay_secs())
-
-        # Check if Bodega and Stagger are running
         try:
+            # Check if Bodega and Stagger are running
             self._check_services_running()
         except _errors.ErrorList as err:
             for err_item in err:
@@ -260,6 +253,9 @@ class ArtifactPoller(_poller.Poller):
             except  _json.decoder.JSONDecodeError as err:
                 raise _errors.JsonDecodeError(self._data_file_name(), err)
 
+    def _validate(self):
+        pass
+
     def _write_data(self):
         """ Write the persistent data for this poller """
         _fortworth.write_json(self._data_file_name(), self._next_artifact_ids)
@@ -295,13 +291,14 @@ class ArtifactPoller(_poller.Poller):
     @staticmethod
     def run(config, name):
         """ Convenience method to run the ArtifactPoller on a scheduler """
-        LOG.info('Starting artifact poller %s...', name)
+        LOG.info('Starting artifact poller "%s"...', name)
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
             artifact_poller = ArtifactPoller(config, name)
             sch.enter(0, 1, artifact_poller.start, (sch, ))
             sch.run()
-        except (_errors.PollerError, _json.decoder.JSONDecodeError) as err:
+        except (_errors.PollerError) as err:
             LOG.error(err)
+            LOG.info('Poller "%s" exiting owing to previous error', name)
         except KeyboardInterrupt:
             pass

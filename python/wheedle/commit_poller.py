@@ -48,20 +48,12 @@ class CommitPoller(_poller.Poller):
 
     def __init__(self, config, name):
         self._last_build_commit_hash = None
-        self._first_entry = True
         self._data = {}
         super().__init__(config, name)
 
     def poll(self):
         """ Read commits from source repository, compare with last commit id of build """
-        # Delay start of commit poller on the first poll so that the artifact poller can
-        # retrieve the last commit hash
-        if self._first_entry:
-            self._first_entry = False
-            delay = self._start_delay_secs()
-            if delay is not None and delay > 0:
-                self._log.info('Initial delay: %d secs...', self._start_delay_secs())
-                _time.sleep(self._start_delay_secs())
+        self._initial_delay()
 
         # Read last commit hash file, it might have been updated since last poll
         self._read_last_commit_hash()
@@ -111,7 +103,7 @@ class CommitPoller(_poller.Poller):
         """ Read the persistent data for this poller """
         if _fortworth.exists(self._data_file_name()):
             self._data = _fortworth.read_json(self._data_file_name())
-            self._log.info('Last build trigger: %s for sha %s', '<date>', '<build-sha>')
+            #self._log.info('Last build trigger: %s for sha %s', '<date>', '<build-sha>')
         else:
             self._log.info('No previous build trigger found - missing file "%s"',
                            self._data_file_name())
@@ -140,6 +132,12 @@ class CommitPoller(_poller.Poller):
         #     json={'event_type': 'trigger-action'})
         self._log.info('Build triggered on "%s"', self._tap_full_name())
 
+    def _validate(self):
+        tap_name = self._poller_config()['trigger_artifact_poller']
+        if not tap_name in self._config:
+            self._raise_config_error('trigger_artifact_poller "{}" does not name a valid poller'. \
+                format(tap_name))
+
     def _write_data(self):
         """ Write the persistent data for this poller """
         _fortworth.write_json(self._data_file_name(), self._data)
@@ -165,7 +163,7 @@ class CommitPoller(_poller.Poller):
     @staticmethod
     def run(config, name):
         """ Convenience method to run the CommitPoller on a scheduler """
-        LOG.info('Starting commit poller %s...', name)
+        LOG.info('Starting commit poller "%s"...', name)
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
             commit_poller = CommitPoller(config, name)
@@ -173,5 +171,6 @@ class CommitPoller(_poller.Poller):
             sch.run()
         except (_errors.PollerError) as err:
             LOG.error(err)
+            LOG.info('Poller "%s" exiting owing to previous error', name)
         except KeyboardInterrupt:
             pass

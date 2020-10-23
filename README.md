@@ -56,6 +56,23 @@ git clone https://github.com/kpvdr/wheedle.git
 No build or install (yet). The application runs using make directly from the repository.
 
 ## Configuration
+Configuration is by a text configuration file (by default `wheedle.conf`), and is formatted as
+follows:
+```
+[section1]
+key1 = value1
+key2 = value2
+
+[section2]
+# Comment
+key3 : value1
+key4 : multi-line value2 is indented
+    on the following lines
+...
+```
+See [Supported INI File Structure](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure)
+in the Python 3 documentation for complete details.
+
 In the following tables, there are references to two GitHub repositories:
 1. **Source repository:** The repository containing the source code, and which the *commit poller*
    polls for new commits;
@@ -63,35 +80,38 @@ In the following tables, there are references to two GitHub repositories:
    and tests packages from the source code in the Source Repository. The *artifact poller* will
    check this repository's actions for new artifacts and process them in Bodega and Stagger.
 
-Currently configuration is performed by modifying app.py, where the following constants are
-defined:
+The following sections are defined by wheedle:
+Section Name | Key Name | Required | Description
+-------------|----------|----------|------------
+`Local` | | Y | Local server configuration
+ | `data_dir` | Y | Name of data directory relative to the home directory. Default: `data`
+`GitHub` | | Y | GitHub configuration
+ | `api_auth_uid` | Y | Authorization ID associated with the token. See [Requirements](requirements) above.
+ | `gh_api_token_file_name`| Y | Name of file containing token in the data directory. See [Requirements](requirements) above.
+ | `service_url` | Y | Service URL for the GitHub API.
+`Logging` | | Y | Logging configuration
+ | `default_log_level` | Y | Logging level, one of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`, `NOTSSET`. Default: `INFO`. See [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) in the Python 3 documentation.
+`DEFAULT` | | | Optional section which sets default values for all following sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections.
+ | `polling_interval_secs` | Y | Polling interval in seconds. The period which each poller waits before polling again.
+ | `error_polling_interval_secs` | Y | Polling interval in seconds when a service error exists. This is typically the unavailability of services such as Stagger and Bodega for Artifact pollers. As long as these services are not available, this polling interval is used until service is restored. This allows for an error condition to be corrected without having to wait hours before another poll takes place.
+ | `source_branch` | Y | Default Git source branch. This is used for tagging and commit polling.
+`[<poller-name>]` | | Section which describes a poller. Any name not described above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller.
+ | `class` | Y | Poller class or type, and MUST be one of `CommitPoller` to describe a commit poller, or `ArtifactPoller` to describe an artifact poller. Any other values are invalid.
+ | `repo_owner` | Y | Git repository owner for the source repository (for commit pollers) or the build repository (for artifact pollers)
+ | `repo_name` | Y | Git repository name for the source repository (for commit pollers) or the build repository (for artifact pollers)
+ | `start_delay_secs` | | If present, the delay in starting the poller in seconds. This can be used to allow the commit poller to wait until the artifact poller has downloaded the last commit hash artifact before checking for new commits. This delay only occurs when wheedle is started.
+ | `data_file_name` | | The name of the JSON file in the data directory which contains persistent data for this poller. When each poller is started, this file will be read to obtain its persistent state. Each time an update to the state occurs, this file will be saved.
 
-Constant | Description
----------|------------
-`GITHUB_SERVICE_URL` |  GitHub API service URL for all GH API requests.
-`BUILD_REPO_OWNER` | GitHub build repository owner.
-`BUILD_REPO_NAME` | GitHub build repository name.
-`SOURCE_REPO_OWNER` | GitHub source repository owner.
-`SOURCE_REPO_NAME` | GitHub source repository name.
-`SOURCE_REPO_BRANCH` | Branch for which commits will be polled and from which build artifacts will be built.
-`GH_API_AUTH_UID` | Name of token owner which will be used for GitHub API calls.
-`GH_API_TOKEN_FILE_NAME` | Text file containing a GitHub personal access token.
-`DATA_DIR` | Location of locally saved data and the GitHub token file.
-`COMMIT_POLLER_START_DELAY` | Delay in seconds for starting the *commit poller* after the *artifact poller* starts. Allows the *artifact poller* to download the last commit hash.
-`ARTIFACT_POLLING_INTERVAL_SECS` | *Artifact poller* interval in seconds.
-`ERROR_POLLING_INTERVAL_SECS` | *Artifact poller* interval in seconds when the Bodega and Stagger services are not running.
-`LAST_BUILD_CID_ARTIFACT_NAME` | Name of file located in the `DATA_DIR` which contains the last successful build commit hash.
-`BUILD_ARTIFACT_NAME_LIST` | Python list of strings containing names of artifacts to be downloaded and processed if found. Wildcards are allowed.
-`ARTIFACT_POLLER_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains the artifact ids of previously downloaded artifacts.
-`TAG` | Tag to be used with Stagger when pushing artifact metadata.
-`BODEGA_URL` | URL for the Bodega artifact service.
-`STAGGER_URL` | URL for the Stagger artifact tagging service.
-`COMMIT_POLLING_INTERVAL_SECS` | *Commit poller* interval in seconds.
-`COMMIT_DATA_FILE_NAME` | Name of file in the `DATA_DIR` which contains *commit poller* persistent data.
-`DEFAULT_LOG_LEVEL` | Log level (one of `DEBUG`, `INFO`, `WARNING`. `ERROR`, `CRITICAL`).
+The following keys are for commit pollers only:
+  | `trigger_artifact_poller` | Y | The name of the corresponding artifact poller that will be triggered when a new commit is detected.
 
-**TODO:** A file-based configuration will be added soon which will allow multiple instances of the
-artifact and commit pollers to run against different repositories.
+The following keys are for artifact pollers only:
+ | `build_artifact_name_list` | Y | JSON list of artifacts which will be downloaded from GitHub. Wildcard `*` is valid. Those artifacts not matching this list will be ignored.
+ | `last_build_hash_file_name` | Y | Name of artifact containing the last commit hash. This is in addition to the files listed in `build_artifact_name_list` above.
+ | `stagger_tag` | Y | The tag which will be used to tag this artifact in Stagger. Usually `untested` or `tested`.
+ | `bodega_url` | Y | URL of the Bodega file archive service. Must be reachable on the network from the wheedle server.
+ | `stagger_url` | Y | URL of the Stagger file tagging service. Must be reachable on the network from the wheedle server.
+ | `build_download_limit` | | Optional limit on the number of workflows to download. The artifact poller will identify the last 50 workflows and will download all those containing artifacts in chronological order (which is usually by order of the run number). However, this can result in an excessive number of artifact downloads for older workflows. If this limit is set, then the poller will identify this number of successful workflows, and will start downloading from that workflow.
 
 ## Installing, Running and Stopping
 #### Running in local environment
@@ -141,5 +161,8 @@ commit_hash.json | JSON | The commit hash of the last build. This is uploaded as
 ## Troubleshooting
 Error | Possible cause
 ------|---------------
+`ConfigFileError` | An error in the configuration file. See [Configuration](#configuration) above.
+`GhConnectionRefusedError` | The URL for GitHub APIs is invalid. Check the value in the configuration file for `[GitHub].service_url`.
+`HttpError` | For 401 (Unauthorized), the GitHub authorization is invalid. Check the values in the configuration file for `[GitHub].api_auth_uid` and `[GitHub].gh_api_token_file_name`, and make sure the token stored in the named file is correct. For 404 (Not Found), the name of the repository owner and/or repository are invalid. Check the values in the configuration file for `[<PollerNmae>].repo_owner` and `[<PollerNmae>].repo_name`.
 `ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached from the pollers. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
-`TokenNotFoundError` | The GitHub token file was not found. See [Requirements](#requirements) above.
+`TokenNotFoundError` | The GitHub token file was not found. Check `[GitHub].gh_api_token_file_name` in the configuration file. See [Requirements](#requirements) above for information on GitHub access tokens.

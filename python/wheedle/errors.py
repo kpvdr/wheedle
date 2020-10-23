@@ -29,8 +29,13 @@ class PollerError(RuntimeError):
 class ConfigFileError(PollerError):
     """ Configuration file error(s) """
 
-    def __init__(self, config_file, error_msg):
-        super().__init__('ConfigFileError: {}: {}'.format(config_file, error_msg))
+    def __init__(self, config_file, config_section, error_msg):
+        if config_section is None:
+            super().__init__('ConfigFileError:\n    Config file: {}\n    Error: {}'. \
+                format(config_file, error_msg))
+        else:
+            super().__init__('ConfigFileError:\n    Config file: {}\n    Section: [{}]\n    Error: {}'. \
+                format(config_file, config_section, error_msg))
 
 
 

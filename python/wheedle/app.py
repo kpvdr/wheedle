@@ -43,9 +43,12 @@ class Application:
         config_file = config_file if config_file is not None else _fortworth.join(home,
                                                                                   'wheedle.conf')
         self._config = _config.Configuration(config_file, data_dir)
-        _logging.basicConfig(level=self._config['Logging']['default_log_level'],
-                             format='%(asctime)s  %(name)s - %(levelname)s: %(message)s',
-                             datefmt='%Y-%m-%d %H:%M:%S %Z')
+        try:
+            _logging.basicConfig(level=self._config['Logging']['default_log_level'],
+                                 format='%(asctime)s  %(name)s - %(levelname)s: %(message)s',
+                                 datefmt='%Y-%m-%d %H:%M:%S %Z')
+        except ValueError as err:
+            raise _errors.ConfigFileError(self._config.config_file(), 'Logging', err)
         self._log.info('Data directory: %s', self._config.data_dir())
 
     def run(self):
@@ -72,8 +75,8 @@ class Application:
             elif poller_class == 'CommitPoller':
                 self._start_commit_poller(poller_name)
             else:
-                raise _errors.ConfigFileError(self._config.config_file(), \
-                    'Poller {}: Unknown poller class "{}"'.format(poller_name, poller_class))
+                raise _errors.ConfigFileError(self._config.config_file(), poller_name, \
+                    'Unknown class "{}"'.format(poller_class))
 
     def _start_artifact_poller(self, name):
         """ Start the named artifact poller """
