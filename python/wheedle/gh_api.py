@@ -136,11 +136,6 @@ class GhArtifactItem(MetadataMap):
         """ Return True if artifact has expired, False if not """
         return self._metadata['expired']
 
-    @staticmethod
-    def hdr():
-        """ Return a header to match the output of to_str() """
-        return '{:>10}  {:>12}  {:>22}  {:<25}'.format('id', 'size', 'created', 'name')
-
         # pylint: disable=invalid-name
     def id(self):
         """ Return artifact id """
@@ -156,7 +151,7 @@ class GhArtifactItem(MetadataMap):
 
     def to_str(self):
         """ Return a pretty string used in reporting """
-        return '{:>10}  {:>12}  {:>22}  {:<25}'.format(self.id(), self.size_in_bytes(),
+        return '{:>10}  {:>12}  {:>20}  {:<25}'.format(self.id(), self.size_in_bytes(),
                                                        self.created_at(), self.name())
 
     def url(self):
@@ -183,6 +178,11 @@ class GhArtifactList(MetadataMap):
     def artifact_item_list(self):
         """ Get list of workflow items """
         return self._artifact_item_list
+
+    @staticmethod
+    def hdr():
+        """ Return a header to match the output of GhArtifactItem.to_str() """
+        return '{:>10}  {:>12}  {:>20}  {:<25}'.format('id', 'size', 'create date/time', 'name')
 
     def __iter__(self):
         return self._artifact_item_list.__iter__()
@@ -221,6 +221,10 @@ class GhCommit(MetadataMap):
         """ Get commit date/time stamp in ISO 8601 format"""
         return self._metadata['commit']['committer']['date']
 
+    def hash(self):
+        """ Get commit sha """
+        return self._metadata['sha']
+
     def html_url(self):
         """ Return HTML URL for this commit """
         return self._metadata['html_url']
@@ -229,12 +233,12 @@ class GhCommit(MetadataMap):
         """ Get commit message """
         return self._metadata['commit']['message']
 
-    def hash(self):
-        """ Get commit sha """
-        return self._metadata['sha']
+    def to_str(self):
+        """ Return a pretty string used in reporting """
+        return '{:>40}  {:>20}  {}'.format(self.hash(), self.date(), self.author_str())
 
     def __repr__(self):
-        return '{} {} {}'.format(self.hash(), self.date(), self.author_str())
+        return 'GhCommit({})'.format(self.hash())
 
 
 class GhCommitList(MetadataMap):
@@ -253,6 +257,11 @@ class GhCommitList(MetadataMap):
     def extend(self, other):
         """ Extend this object with the contents of antoher list object """
         self._commit_list.extend(other.commit_list())
+
+    @staticmethod
+    def hdr():
+        """ Return a header to match the output of GhCommit.to_str() """
+        return '{:>40}  {:>20}  {}'.format('commit hash', 'commit date/time', 'author')
 
     def last_commit(self):
         """ Return last (most recent) commit, or None if no commits exist """

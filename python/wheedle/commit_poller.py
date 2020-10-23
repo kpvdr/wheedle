@@ -90,8 +90,9 @@ class CommitPoller(_poller.Poller):
             num_commits = len(commits_since_build_trigger)
             suffix = 's' if num_commits > 1 else ''
             self._log.info('%d commit%s since last build trigger:', num_commits, suffix)
+            self._log.info('  %s', _gh_api.GhCommitList.hdr())
             for commit in commits_since_build_trigger:
-                self._log.info('  %s', commit)
+                self._log.info('  %s', commit.to_str())
             self._trigger_build()
         else:
             self._log.info('No commits since last build')
@@ -110,27 +111,28 @@ class CommitPoller(_poller.Poller):
 
     def _read_last_commit_hash(self):
         """ Read the commit hash of any previous build that might have been made """
-        last_commit_file_base_name = '{}.{}.json'.format(self._tap_last_build_hash_file_name(),
-                                                         self._tap_name())
-        last_commit_file_name = _fortworth.join(self._config.data_dir(),
-                                                last_commit_file_base_name)
-        if _fortworth.exists(last_commit_file_name):
-            last_build_commit = _fortworth.read_json(last_commit_file_name)
+        last_commit_hash_file_name = self._tap_last_build_hash_file_name()
+        if _fortworth.exists(last_commit_hash_file_name):
+            last_build_commit = _fortworth.read_json(last_commit_hash_file_name)
             self._last_build_commit_hash = last_build_commit['commit-hash']
             self._log.info('Last build hash: %s', self._last_build_commit_hash)
         else:
             self._last_build_commit_hash = None
-            self._log.info('No last build hash found - missing file "%s"', last_commit_file_name)
+            self._log.info('No last build hash found - missing file "%s"',
+                           last_commit_hash_file_name)
 
     def _trigger_build(self):
         """ Trigger a GitHub action """
-        # _gh_api.gh_http_post_request( \
-        #     '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
-        #                                     self._tap_full_name()),
-        #     auth=self._config.auth(),
-        #     params={'accept': 'application/vnd.github.v3+json'},
-        #     json={'event_type': 'trigger-action'})
-        self._log.info('Build triggered on "%s"', self._tap_full_name())
+        if not self._trigger_dry_run():
+            # _gh_api.gh_http_post_request( \
+            #     '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
+            #                                     self._tap_full_name()),
+            #     auth=self._config.auth(),
+            #     params={'accept': 'application/vnd.github.v3+json'},
+            #     json={'event_type': 'trigger-action'})
+            self._log.info('Build triggered on "%s"', self._tap_full_name())
+        else:
+            self._log.info('Build triggered on "%s" (DRY RUN)', self._tap_full_name())
 
     def _validate(self):
         tap_name = self._poller_config()['trigger_artifact_poller']
@@ -155,10 +157,18 @@ class CommitPoller(_poller.Poller):
                                self._tap_config()['repo_name'])
 
     def _tap_last_build_hash_file_name(self):
-        return self._tap_config()['last_build_hash_file_name']
+        if 'last_build_hash_file_name' in self._tap_config():
+            return _fortworth.join(self._config.data_dir(),
+                                   self._tap_config()['last_build_hash_file_name'])
+        return _fortworth.join(self._config.data_dir(),
+                               'last_build_hash.{}.json'.format(self._tap_name()))
 
     def _tap_name(self):
         return self._poller_config()['trigger_artifact_poller']
+
+    def _trigger_dry_run(self):
+        if 'trigger_dry_run' in self._poller_config():
+            return self._poller_config()['trigger_dry_run'].lower() in ['true', 'yes', '1']
 
     @staticmethod
     def run(config, name):

@@ -42,12 +42,12 @@ in the `DATA_DIR` directory. You can rename this, but make sure to change the co
 (see [Configuration](#configuration) below) to reflect the new name.
 
 ## Dependencies
-- **Requests** (https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
+- [**Requests**](https://requests.readthedocs.io/en/master/) - This is packaged on some distros (such as
   Fedora) but must be installed using `pip install --user requests` on those where this is not the
   case.
-- **Podman** (https://podman.io/) - Packaged on most distros. This is needed if building or using
+- [**Podman**](https://podman.io/) - Packaged on most distros. This is needed if building or using
   containers
-- **Python 3**
+- [**Python 3**](https://www.python.org/)
 
 ## Building and installing
 ```
@@ -57,28 +57,15 @@ make install
 
 ## Configuration
 Configuration is by a text configuration file (by default `wheedle.conf` in the home directory),
-and is formatted as follows:
-```
-[section1]
-key1 = value1
-key2 = value2
-
-[section2]
-# Comment
-key3 : value1
-key4 : multi-line value2 is indented
-    on the following lines
-...
-```
-See [Supported INI File Structure](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure)
-in the Python 3 documentation for complete details.
+and is formatted as an
+[INI File](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure).
 
 In the following tables, there are references to two GitHub repositories:
- - **Source repository:** The repository containing the source code, and which the ***commit poller***
-   polls for new commits;
- - **Build repository:** The repository which is triggered by the *commit poller*, and which builds
-   and tests packages from the source code in the Source Repository. The ***artifact poller*** will
-   check this repository's actions for new artifacts and process them in Bodega and Stagger.
+ - **Source repository:** The repository containing the source code, and which the
+   ***commit poller*** polls for new commits;
+ - **Build repository:** The repository which builds the source code to produce ***artifacts***, and
+   which the ***artifact poller*** polls for new artifacts. The Build Actions workflow in this
+   repository is triggered by the *commit poller* when a new commit is detected.
 
 #### Configuration File Sections
 The following sections are defined by wheedle:
@@ -118,7 +105,7 @@ Section which describes a poller. Any section name not described above is valid.
 | `repo_owner` | Y | Git repository owner for the source repository (for commit pollers) or the build repository (for artifact pollers) |
 | `repo_name` | Y | Git repository name for the source repository (for commit pollers) or the build repository (for artifact pollers) |
 | `start_delay_secs` | | If present, the delay in starting the poller in seconds. This can be used to allow the commit poller to wait until the artifact poller has downloaded the last commit hash artifact before checking for new commits. This delay only occurs when wheedle is started. |
-| `data_file_name` | | The name of the JSON file in the data directory which contains persistent data for this poller. When each poller is started, this file will be read to obtain its persistent state. Each time an update to the state occurs, this file will be saved. |
+| `data_file_name` | | The name of the JSON file in the data directory which contains persistent data for this poller. When each poller is started, this file will be read to obtain its persistent state. Each time an update to the state occurs, this file will be saved. **Default:** `data-file.<poller-nmae>.json` |
 | `polling_interval_secs` | Y | Polling interval in seconds. The period which each poller waits before polling again. This value is typically included in the `DEFAULT` section if several pollers share the same polling interval. |
 | `error_polling_interval_secs` | Y | Polling interval in seconds when a service error exists. This is typically the unavailability of services such as Stagger and Bodega for Artifact pollers. As long as these services are not available, this polling interval is used until service is restored. This allows for an error condition to be corrected without having to wait hours before another poll takes place. This value is typically included in the `DEFAULT` section if several pollers share the same error polling interval. |
 | `source_branch` | Y | Default Git source branch. This is used for tagging and commit polling. This value is typically included in the `DEFAULT` section if several pollers use the same source branch. |
@@ -128,17 +115,19 @@ The following keys are for artifact pollers only:
 | Key Name | Required | Description |
 | --- | :---: | --- |
 | `build_artifact_name_list` | Y | JSON list of artifacts which will be downloaded from GitHub. Wildcard `*` is valid. Those artifacts not matching this list will be ignored. Example: `[my-file, py*-install]`  **NOTE:** The `last_build_hash_file_name` is also downloaded, but is not set here but in its own section `last_build_hash_file_name`. |
-| `last_build_hash_file_name` | Y | Name of artifact containing the last commit hash. This is in addition to the files listed in `build_artifact_name_list` above. |
+| `last_build_hash_artifact_name` | Y | Name of artifact containing the last commit hash. This is in addition to the files listed in `build_artifact_name_list` above. |
+| `last_build_hash_file_name` | | The name of the JSON file in the data directory which contains the commit hash for the last build. Each time a new commit is detected by the commit poller, the new commit hash will be saved in this file. **Default:** `commit_hash.<artifact-poller-name>.json`. |
 | `stagger_tag` | Y | The tag which will be used to tag this artifact in Stagger. Usually `untested` or `tested`. |
 | `bodega_url` | Y | URL of the Bodega file archive service. Must be reachable on the network from the wheedle server. |
 | `stagger_url` | Y | URL of the Stagger file tagging service. Must be reachable on the network from the wheedle server. |
-| `build_download_limit` | | Optional limit on the number of workflows to download. The artifact poller will identify the last 50 workflows and will download all those containing artifacts in chronological order (which is usually by order of the run number). However, this can result in an excessive number of artifact downloads for older workflows. If this limit is set, then the poller will identify this number of successful workflows, and will start downloading from that workflow. |
+| `build_download_limit` | | Optional limit on the number of workflows to download. The artifact poller will identify the last 50 workflows and will download all those containing artifacts in chronological order (which is usually by order of the run number). However, this can result in an excessive number of artifact downloads for older workflows. If this limit is set, then the poller will identify this number of successful workflows, and will start downloading from that workflow. **Default:** All successful workflows (state `completed:success`) in the first 50 will be downloaded. |
 
 #### Commit Pollers
 The following keys are for commit pollers only:
 | Key Name | Required | Description |
 | --- | :---: | --- |
 | `trigger_artifact_poller` | Y | The name of the corresponding artifact poller that will be triggered when a new commit is detected. |
+| `trigger_dry_run` | | Disable actual build trigger, but will log a trigger as a dry run. This is to conserve GitHub resources while testing / debugging. Valid values: 'true', 'yes', '1', and are case-insensitive. Any value not in this list, or the lack of this key will be considered false/off, and actual triggers will be initiated. |
 
 ## Installing, Running and Stopping
 #### Running in local environment
@@ -173,19 +162,17 @@ different install directory) before the application can run.
 
 ## Persistent Data
 Persistent data which is re-loaded each time the application is started, is saved in `DATA_DIR`
-(`${HOME}/.local/opt/wheedle` by default).
+(`${HOME}/.local/opt/wheedle` by default). The data files are named `data.<poller-name>.json` by
+default, but each poller section in the configuration file can set a unique name using the
+`data_file_name` key.
 
 Persistent data may be cleared by deleting the JSON files (`*.json`) in `DATA_DIR`, or by running
-`make clean`. **WARNING:** Do not delete the Personal Access Token file `token` which is also
-located in this directory. The application will not run without this file.
-
-## Persistence Files
-Name | Type | Description
------|------|------------
-artifact_id.json | JSON | A list of artifact ids previously seen indexed by run number.
-commit_hash.json | JSON | The commit hash of the last build. This is uploaded as an artifact.
+`make clean`. **WARNING:** Do not delete data directory or the Personal Access Token file `token`
+which is located in this directory. The application will not run without this file.
 
 ## Troubleshooting
+
+### Errors
 Error | Possible cause
 ------|---------------
 `ConfigFileError` | An error in the configuration file. See [Configuration](#configuration) above.
@@ -193,3 +180,6 @@ Error | Possible cause
 `HttpError` | For 401 (Unauthorized), the GitHub authorization is invalid. Check the values in the configuration file for `[GitHub].api_auth_uid` and `[GitHub].gh_api_token_file_name`, and make sure the token stored in the named file is correct. For 404 (Not Found), the name of the repository owner and/or repository are invalid. Check the values in the configuration file for `[<PollerNmae>].repo_owner` and `[<PollerNmae>].repo_name`.
 `ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached from the pollers. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
 `TokenNotFoundError` | The GitHub token file was not found. Check `[GitHub].gh_api_token_file_name` in the configuration file. See [Requirements](#requirements) above for information on GitHub access tokens.
+
+### Other Issues
+ - **Build not triggered when commits found:** This can happen if the commit poller has been configured to use dry runs. Because GitHub resources are limited and expensive, it is possible to disable an actual trigger when testing a configuration or debugging. This is done by setting the key `trigger_dry_run` to 'true', 'yes' or '1' under a given commit poller. Check the logs where a commit is found. The commit list should be followed by the string `INFO: Build triggered on "<artifact-poller-name>" (DRY RUN)`. If the trigger is real (not a dry run), the the `(DRY RUN)` suffix is omitted. Check the configuration file, and either remove the `trigger_dry_run` key, or set its value to 'false'.

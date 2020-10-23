@@ -69,7 +69,9 @@ class Poller:
     # Some common configuration value convenience methods
 
     def _data_file_name(self):
-        return _fortworth.join(self._config.data_dir(), self._poller_config()['data_file_name'])
+        if 'data_file_name' in self._poller_config():
+            return _fortworth.join(self._config.data_dir(), self._poller_config()['data_file_name'])
+        return _fortworth.join(self._config.data_dir(), 'data_file.{}.json'.format(self._name))
 
     def _poller_config(self):
         """ Config for this poller """

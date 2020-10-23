@@ -83,12 +83,12 @@ class Configuration:
 
     def _check_artifact_poller(self, key):
         self._check_keys(['class', 'repo_owner', 'repo_name', 'build_artifact_name_list',
-                          'data_file_name', 'last_build_hash_file_name', 'stagger_tag',
-                          'bodega_url', 'stagger_url', 'polling_interval_secs',
-                          'error_polling_interval_secs', 'source_branch'], key)
+                          'last_build_hash_artifact_name', 'stagger_tag', 'bodega_url',
+                          'stagger_url', 'polling_interval_secs', 'error_polling_interval_secs',
+                          'source_branch'], key)
 
     def _check_commit_poller(self, key):
-        self._check_keys(['class', 'repo_owner', 'repo_name', 'start_delay_secs', 'data_file_name',
+        self._check_keys(['class', 'repo_owner', 'repo_name', 'start_delay_secs',
                           'trigger_artifact_poller', 'polling_interval_secs',
                           'error_polling_interval_secs', 'source_branch'], key)
 
@@ -141,6 +141,4 @@ class Configuration:
         self._check_keys(['data_dir'], 'Local')
         self._check_keys(['api_auth_uid', 'gh_api_token_file_name', 'service_url'], 'GitHub')
         self._check_keys(['default_log_level'], 'Logging')
-        # self._check_keys(['polling_interval_secs', 'error_polling_interval_secs', 'source_branch'],
-        #                  'DEFAULT')
         self._check_pollers()

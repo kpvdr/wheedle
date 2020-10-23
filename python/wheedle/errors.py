@@ -34,8 +34,8 @@ class ConfigFileError(PollerError):
             super().__init__('ConfigFileError:\n    Config file: {}\n    Error: {}'. \
                 format(config_file, error_msg))
         else:
-            super().__init__('ConfigFileError:\n    Config file: {}\n    Section: [{}]\n    Error: {}'. \
-                format(config_file, config_section, error_msg))
+            super().__init__('ConfigFileError:\n    Config file: {}\n    Section: [{}]\n'
+                             '    Error: {}'.format(config_file, config_section, error_msg))
 
 
 

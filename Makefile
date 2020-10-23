@@ -31,7 +31,7 @@ install:
 
 .PHONY: run
 run: install
-	@cd ${INSTALL_DIR}; ./bin/wheedle
+	@cd ${INSTALL_DIR}; ./bin/wheedle $(ARGS)
 
 .PHONY: uninstall
 uninstall:

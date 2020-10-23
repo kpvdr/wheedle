@@ -66,8 +66,8 @@ class ArtifactPoller(_poller.Poller):
         super().__init__(config, name)
 
     def poll(self):
-        self._initial_delay()
         """ Perform poll task. Return True if required services are not running, False otherwise """
+        self._initial_delay()
         try:
             # Check if Bodega and Stagger are running
             self._check_services_running()
@@ -109,7 +109,7 @@ class ArtifactPoller(_poller.Poller):
         try:
             downloaded_filename = artifact.download(bodega_temp_dir,
                                                     self._config.auth())
-            if downloaded_filename == self._last_build_hash_file_name():
+            if downloaded_filename == self._last_build_hash_artifact_name():
                 self._process_commit_hash(bodega_temp_dir)
             bodega_artifact_list.append((artifact, downloaded_filename))
         except _requests.exceptions.ConnectionError:
@@ -129,7 +129,7 @@ class ArtifactPoller(_poller.Poller):
 
     def _is_needed_artifact(self, artifact_name):
         """ Check if an artifact is in the list of needed artifacts """
-        if artifact_name == self._last_build_hash_file_name():
+        if artifact_name == self._last_build_hash_artifact_name():
             return True
         artifact_list = _fortworth.parse_json(self._build_artifact_name_list())
         for needed_artifact in artifact_list:
@@ -145,7 +145,7 @@ class ArtifactPoller(_poller.Poller):
         bodega_temp_dir = _fortworth.make_temp_dir(suffix='-{}'.format(run_number_str))
         for artifact in wf_item:
             if first_in:
-                self._log.info('    %s', _gh_api.GhArtifactItem.hdr())
+                self._log.info('    %s', _gh_api.GhArtifactList.hdr())
                 first_in = False
             if self._is_needed_artifact(artifact.name()) and not artifact.expired():
                 if run_number_str not in self._prev_artifact_ids or \
@@ -166,13 +166,10 @@ class ArtifactPoller(_poller.Poller):
 
     def _process_commit_hash(self, bodega_temp_dir):
         """ Extract zipped commit-id json file into data dir """
-        file_name_base = _fortworth.join(bodega_temp_dir, self._last_build_hash_file_name())
+        file_name_base = _fortworth.join(bodega_temp_dir, self._last_build_hash_artifact_name())
         with _zipfile.ZipFile(file_name_base + '.zip', 'r') as zip_obj:
             zip_obj.extractall(path=bodega_temp_dir)
-        target_file_name = _fortworth.join(self._config.data_dir(),
-                                           '{}.{}.json'.format(self._last_build_hash_file_name(),
-                                                               self._name))
-        _shutil.copyfile(file_name_base + '.json', target_file_name)
+        _shutil.copyfile(file_name_base + '.json', self._last_build_hash_file_name())
 
     def _process_workflow_list(self, workflow_list):
         """ Find artifacts in each workflow that is not already in Bodega """
@@ -276,8 +273,15 @@ class ArtifactPoller(_poller.Poller):
             return None
         return int(self._poller_config()['build_download_limit'])
 
+    def _last_build_hash_artifact_name(self):
+        return self._poller_config()['last_build_hash_artifact_name']
+
     def _last_build_hash_file_name(self):
-        return self._poller_config()['last_build_hash_file_name']
+        if 'last_build_hash_file_name' in self._poller_config():
+            return _fortworth.join(self._config.data_dir(),
+                                   self._poller_config()['last_build_hash_file_name'])
+        return _fortworth.join(self._config.data_dir(),
+                               'last_build_hash.{}.json'.format(self._name))
 
     def _repo_name(self):
         return self._poller_config()['repo_name']
