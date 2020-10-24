@@ -177,9 +177,13 @@ Error | Possible cause
 ------|---------------
 `ConfigFileError` | An error in the configuration file. See [Configuration](#configuration) above.
 `GhConnectionRefusedError` | The URL for GitHub APIs is invalid. Check the value in the configuration file for `[GitHub].service_url`.
-`HttpError` | For 401 (Unauthorized), the GitHub authorization is invalid. Check the values in the configuration file for `[GitHub].api_auth_uid` and `[GitHub].gh_api_token_file_name`, and make sure the token stored in the named file is correct. For 404 (Not Found), the name of the repository owner and/or repository are invalid. Check the values in the configuration file for `[<PollerNmae>].repo_owner` and `[<PollerNmae>].repo_name`.
+`HttpError` | For **401 (Unauthorized)**, the GitHub authorization is invalid. Check the values in the configuration file for `[GitHub].api_auth_uid` and `[GitHub].gh_api_token_file_name`, and make sure the token stored in the named file is correct. For **404 (Not Found)**, the name of the repository owner and/or repository are invalid. Check the values in the configuration file for `[<PollerNmae>].repo_owner` and `[<PollerNmae>].repo_name`.
 `ServiceConnectionError` | Either or both the Stagger and Bodega services could not be reached from the pollers. Check the `BODEGA_URL` and `STAGGER_URL` settings, and make sure that these are running and are accessible on the network from the poller machine.
 `TokenNotFoundError` | The GitHub token file was not found. Check `[GitHub].gh_api_token_file_name` in the configuration file. See [Requirements](#requirements) above for information on GitHub access tokens.
 
 ### Other Issues
- - **Build not triggered when commits found:** This can happen if the commit poller has been configured to use dry runs. Because GitHub resources are limited and expensive, it is possible to disable an actual trigger when testing a configuration or debugging. This is done by setting the key `trigger_dry_run` to 'true', 'yes' or '1' under a given commit poller. Check the logs where a commit is found. The commit list should be followed by the string `INFO: Build triggered on "<artifact-poller-name>" (DRY RUN)`. If the trigger is real (not a dry run), the the `(DRY RUN)` suffix is omitted. Check the configuration file, and either remove the `trigger_dry_run` key, or set its value to 'false'.
+ - **Build not triggered when commits found:** This can happen if the commit poller has been configured to use dry runs. Because GitHub resources are limited and expensive, it is possible to disable an actual trigger when testing a configuration or debugging. This is done by setting the key `trigger_dry_run` to 'true', 'yes' or '1' under a given commit poller. Check the logs where a commit is found. The commit list should be followed by the string:
+```
+INFO: Build triggered on "<artifact-poller-name>" (DRY RUN)
+```
+If the trigger is real (not a dry run), the the `(DRY RUN)` suffix is omitted. Check the configuration file, and either remove the `trigger_dry_run` key, or set its value to 'false'.
