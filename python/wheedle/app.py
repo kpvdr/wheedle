@@ -48,7 +48,7 @@ class Application:
                                  format='%(asctime)s  %(name)s - %(levelname)s: %(message)s',
                                  datefmt='%Y-%m-%d %H:%M:%S %Z')
         except ValueError as err:
-            raise _errors.ConfigFileError(self._config.config_file(), 'Logging', err)
+            raise _errors.ConfigFileError(self._config.config_file_name(), 'Logging', err)
         self._log.info('Data directory: %s', self._config.data_dir())
 
     def run(self):
@@ -75,7 +75,7 @@ class Application:
             elif poller_class == 'CommitPoller':
                 self._start_commit_poller(poller_name)
             else:
-                raise _errors.ConfigFileError(self._config.config_file(), poller_name, \
+                raise _errors.ConfigFileError(self._config.config_file_name(), poller_name, \
                     'Unknown class "{}"'.format(poller_class))
 
     def _start_artifact_poller(self, name):

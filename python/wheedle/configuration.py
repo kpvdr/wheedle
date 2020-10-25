@@ -31,12 +31,15 @@ import wheedle.errors as _errors
 class Configuration:
     """ Class holding configuration for app """
 
-    def __init__(self, config_file, data_dir):
-        self._config_file = config_file
+    def __init__(self, config_file_name, data_dir):
+        self._config_file_name = config_file_name
         self._config = _cp.ConfigParser()
-        self._config.read(config_file)
         try:
+            self._read_config_file(config_file_name)
             self._validate()
+        except _cp.ParsingError as err:
+            print('Config file error: {}'.format(err))
+            _fortworth.exit(1)
         except _errors.PollerError as err:
             print(err)
             _fortworth.exit(1)
@@ -63,9 +66,9 @@ class Configuration:
         """ Return list of commit pollers """
         return self._poller_names('CommitPoller')
 
-    def config_file(self):
+    def config_file_name(self):
         """ Return configuration file name """
-        return self._config_file
+        return self._config_file_name
 
     def data_dir(self):
         """ Return data directory """
@@ -77,7 +80,7 @@ class Configuration:
 
     def _check_all_in_list(self, config_section, test_list, target_list, descr):
         if not all(elt in target_list for elt in test_list):
-            raise _errors.ConfigFileError(self._config_file, config_section, \
+            raise _errors.ConfigFileError(self._config_file_name, config_section, \
                 'Required {} missing: {}'.format(descr,
                                                  [i for i in test_list if i not in target_list]))
 
@@ -113,10 +116,10 @@ class Configuration:
                 elif poller_class == 'CommitPoller':
                     self._check_commit_poller(poller_key)
                 else:
-                    raise _errors.ConfigFileError(self._config_file, poller_key,
+                    raise _errors.ConfigFileError(self._config_file_name, poller_key,
                                                   'Unknown poller class {}'.format(poller_class))
             else:
-                raise _errors.ConfigFileError(self._config_file, poller_key,
+                raise _errors.ConfigFileError(self._config_file_name, poller_key,
                                               'Missing required "class" key/value')
 
     def _poller_names(self, clazz):
@@ -127,6 +130,12 @@ class Configuration:
             if self[name]['class'] == clazz:
                 names.append(name)
         return names
+
+    def _read_config_file(self, config_file_name):
+        try:
+            self._config.read(config_file_name)
+        except _cp.Error as err:
+            raise _errors.ConfigFileError(self._config_file_name, None, err)
 
     @staticmethod
     def _read_token(token_file):

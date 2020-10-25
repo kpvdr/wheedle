@@ -169,6 +169,7 @@ class CommitPoller(_poller.Poller):
     def _trigger_dry_run(self):
         if 'trigger_dry_run' in self._poller_config():
             return self._poller_config()['trigger_dry_run'].lower() in ['true', 'yes', '1']
+        return False
 
     @staticmethod
     def run(config, name):

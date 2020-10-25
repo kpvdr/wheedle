@@ -63,7 +63,7 @@ class Poller:
                 _time.sleep(delay)
 
     def _raise_config_error(self, msg):
-        raise _errors.ConfigFileError(self._config.config_file(), self._name, msg)
+        raise _errors.ConfigFileError(self._config.config_file_name(), self._name, msg)
 
 
     # Some common configuration value convenience methods
