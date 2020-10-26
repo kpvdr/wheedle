@@ -60,14 +60,14 @@ def remove(path):
 class ArtifactPoller(_poller.Poller):
     """ Poller which polls for GitHub actions artifacts at a regular interval """
 
-    def __init__(self, config, name):
+    def __init__(self, config, name, ap_event):
         self._prev_artifact_ids = {} # JSON artifact list from previous poll
         self._next_artifact_ids = {} # JSON artifact list for next poll
-        super().__init__(config, name)
+        self._last_build_commit_hash = None
+        super().__init__(config, name, ap_event, True)
 
     def poll(self):
         """ Perform poll task. Return True if required services are not running, False otherwise """
-        self._initial_delay()
         try:
             # Check if Bodega and Stagger are running
             self._check_services_running()
@@ -85,6 +85,11 @@ class ArtifactPoller(_poller.Poller):
 
         # Save persistent data from this poll
         self._write_data()
+
+        # Signal commit poller
+        if self._ap_event is not None:
+            self._ap_event.set()
+
         return False
 
     def _check_services_running(self):
@@ -169,7 +174,8 @@ class ArtifactPoller(_poller.Poller):
         file_name_base = _fortworth.join(bodega_temp_dir, self._last_build_hash_artifact_name())
         with _zipfile.ZipFile(file_name_base + '.zip', 'r') as zip_obj:
             zip_obj.extractall(path=bodega_temp_dir)
-        _shutil.copyfile(file_name_base + '.json', self._last_build_hash_file_name())
+        self._last_build_commit_hash = _fortworth.read_json(file_name_base + '.json')['commit-hash']
+        _shutil.move(file_name_base + '.json', self._last_build_hash_file_name())
 
     def _process_workflow_list(self, workflow_list):
         """ Find artifacts in each workflow that is not already in Bodega """
@@ -228,11 +234,14 @@ class ArtifactPoller(_poller.Poller):
                 'update_time': _gh_api.str_time_to_milli_ts(artifact.created_at()),
                 'url': _fortworth.join(bodega_artifact_path, bodega_file_name + '.zip'),
                 }
+        commit_url = None if self._source_repo_full_name() is None else \
+            'https://github.com/{}/commit/{}'.format(self._source_repo_full_name(),
+                                                     self._last_build_commit_hash)
         tag_data = {'update_time': _gh_api.str_time_to_milli_ts(workflow_metadata.updated_at()),
                     'build_id': workflow_metadata.run_number(),
                     'build_url': workflow_metadata.html_url(),
-                    'commit_hash': None,
-                    'commit_url': None,
+                    'commit_id': self._last_build_commit_hash,
+                    'commit_url': commit_url,
                     'artifacts': stagger_artifact_list,
                    }
         try:
@@ -273,6 +282,12 @@ class ArtifactPoller(_poller.Poller):
             return None
         return int(self._poller_config()['build_download_limit'])
 
+    def _data_file_name(self):
+        if 'artifact_poller_data_file_name' in self._poller_config():
+            return _fortworth.join(self._config.data_dir(),
+                                   self._poller_config()['artifact_poller_data_file_name'])
+        return _fortworth.join(self._config.data_dir(), 'data_file.ap.{}.json'.format(self._name))
+
     def _last_build_hash_artifact_name(self):
         return self._poller_config()['last_build_hash_artifact_name']
 
@@ -284,7 +299,7 @@ class ArtifactPoller(_poller.Poller):
                                'last_build_hash.{}.json'.format(self._name))
 
     def _repo_name(self):
-        return self._poller_config()['repo_name']
+        return self._poller_config()['build_repo_name']
 
     def _stagger_tag(self):
         return self._poller_config()['stagger_tag']
@@ -293,12 +308,12 @@ class ArtifactPoller(_poller.Poller):
         return self._poller_config()['stagger_url']
 
     @staticmethod
-    def run(config, name):
+    def run(config, name, ap_event):
         """ Convenience method to run the ArtifactPoller on a scheduler """
         LOG.info('Starting artifact poller "%s"...', name)
         try:
             sch = _sched.scheduler(_time.time, _time.sleep)
-            artifact_poller = ArtifactPoller(config, name)
+            artifact_poller = ArtifactPoller(config, name, ap_event)
             sch.enter(0, 1, artifact_poller.start, (sch, ))
             sch.run()
         except (_errors.PollerError) as err:

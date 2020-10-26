@@ -54,8 +54,7 @@ class Application:
     def run(self):
         """ Run the application. This starts each of the configured artifact and commit pollers """
         try:
-            self._start_pollers(self._config.artifact_poller_names())
-            self._start_pollers(self._config.commit_poller_names())
+            self._start_pollers(self._config.poller_names())
 
             # Wait for processes to terminate
             for process in self._process_list:
@@ -69,28 +68,25 @@ class Application:
 
     def _start_pollers(self, poller_name_list):
         for poller_name in poller_name_list:
-            poller_class = self._config[poller_name]['class']
-            if poller_class == 'ArtifactPoller':
-                self._start_artifact_poller(poller_name)
-            elif poller_class == 'CommitPoller':
-                self._start_commit_poller(poller_name)
-            else:
-                raise _errors.ConfigFileError(self._config.config_file_name(), poller_name, \
-                    'Unknown class "{}"'.format(poller_class))
+            ap_event = None
+            if self._config.has_commit_poller(poller_name):
+                ap_event = _mp.Event()
+                self._start_commit_poller(poller_name, ap_event)
+            self._start_artifact_poller(poller_name, ap_event)
 
-    def _start_artifact_poller(self, name):
+    def _start_artifact_poller(self, name, ap_event):
         """ Start the named artifact poller """
         artifact_poller_process = _mp.Process(target=_apoller.ArtifactPoller.run,
-                                              args=(self._config, name),
-                                              name='{}-process'.format(name))
+                                              args=(self._config, name, ap_event),
+                                              name=name + '-AP')
         artifact_poller_process.start()
         self._process_list.append(artifact_poller_process)
 
-    def _start_commit_poller(self, name):
+    def _start_commit_poller(self, name, ap_event):
         """ Start the named commit poller """
         commit_poller_process = _mp.Process(target=_cpoller.CommitPoller.run,
-                                            args=(self._config, name),
-                                            name='{}-process'.format(name))
+                                            args=(self._config, name, ap_event),
+                                            name=name + '-CP')
         commit_poller_process.start()
         self._process_list.append(commit_poller_process)
 

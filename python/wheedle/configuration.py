@@ -54,17 +54,9 @@ class Configuration:
     def __getitem__(self, key):
         return self._config.__getitem__(key)
 
-    def artifact_poller_names(self):
-        """ Return list of artifact pollers """
-        return self._poller_names('ArtifactPoller')
-
     def auth(self):
         """ Return GitHub authorization token """
         return self._auth
-
-    def commit_poller_names(self):
-        """ Return list of commit pollers """
-        return self._poller_names('CommitPoller')
 
     def config_file_name(self):
         """ Return configuration file name """
@@ -74,9 +66,14 @@ class Configuration:
         """ Return data directory """
         return self._data_dir
 
-    def repo_full_name(self, name):
-        """ Convenience method to return repository full name (owner/name) """
-        return _fortworth.join(self[name]['repo_owner'], self[name]['repo_name'])
+    def has_commit_poller(self, name):
+        """ Return True if a commit poller is configured for section name """
+        return 'source_repo_owner' in self._config[name]
+
+    def poller_names(self):
+        """ Return list of pollers """
+        return [i for i in self._config.sections() if i not in ['Local', 'GitHub', 'Logging',
+                                                                'DEFAULT']]
 
     def _check_all_in_list(self, config_section, test_list, target_list, descr):
         if not all(elt in target_list for elt in test_list):
@@ -85,15 +82,13 @@ class Configuration:
                                                  [i for i in test_list if i not in target_list]))
 
     def _check_artifact_poller(self, key):
-        self._check_keys(['class', 'repo_owner', 'repo_name', 'build_artifact_name_list',
-                          'last_build_hash_artifact_name', 'stagger_tag', 'bodega_url',
-                          'stagger_url', 'polling_interval_secs', 'error_polling_interval_secs',
-                          'source_branch'], key)
+        self._check_keys(['bodega_url', 'build_artifact_name_list', 'build_repo_name',
+                          'build_repo_owner', 'error_polling_interval_secs',
+                          'last_build_hash_artifact_name', 'polling_interval_secs', 'source_branch',
+                          'stagger_tag', 'stagger_url'], key)
 
     def _check_commit_poller(self, key):
-        self._check_keys(['class', 'repo_owner', 'repo_name', 'start_delay_secs',
-                          'trigger_artifact_poller', 'polling_interval_secs',
-                          'error_polling_interval_secs', 'source_branch'], key)
+        self._check_keys(['source_repo_owner', 'source_repo_name'], key)
 
     def _check_keys(self, key_list, section=None):
         target_list = []
@@ -109,27 +104,10 @@ class Configuration:
         poller_keys = [i for i in self._config.sections() if i not in ['Local', 'GitHub', 'Logging',
                                                                        'DEFAULT']]
         for poller_key in poller_keys:
-            if 'class' in self[poller_key]:
-                poller_class = self[poller_key]['class']
-                if poller_class == 'ArtifactPoller':
-                    self._check_artifact_poller(poller_key)
-                elif poller_class == 'CommitPoller':
-                    self._check_commit_poller(poller_key)
-                else:
-                    raise _errors.ConfigFileError(self._config_file_name, poller_key,
-                                                  'Unknown poller class {}'.format(poller_class))
-            else:
-                raise _errors.ConfigFileError(self._config_file_name, poller_key,
-                                              'Missing required "class" key/value')
-
-    def _poller_names(self, clazz):
-        names = []
-        poller_keys = [i for i in self._config.sections() if i not in ['Local', 'GitHub', 'Logging',
-                                                                       'DEFAULT']]
-        for name in poller_keys:
-            if self[name]['class'] == clazz:
-                names.append(name)
-        return names
+            self._check_artifact_poller(poller_key)
+            if 'source_repo_owner' in self._config[poller_key] or \
+                'source_repo_name' in self._config[poller_key]:
+                self._check_commit_poller(poller_key)
 
     def _read_config_file(self, config_file_name):
         try:

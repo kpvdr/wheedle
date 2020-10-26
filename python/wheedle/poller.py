@@ -24,7 +24,7 @@ Common classes used by the various pollers.
 
 import abc as _abc
 import logging as _logging
-import time as _time
+#import time as _time
 
 import fortworth as _fortworth
 import wheedle.errors as _errors
@@ -35,11 +35,11 @@ import wheedle.gh_api as _gh_api
 class Poller:
     """ Parent class for pollers that polls a GitHub repository for events or artifacts """
 
-    def __init__(self, config, name):
+    def __init__(self, config, name, ap_event, ap_flag):
         self._config = config
         self._name = name
-        self._first_entry = True
-        self._repo = _gh_api.GhRepository.create_repository(config, name)
+        self._ap_event = ap_event
+        self._repo = _gh_api.GhRepository.create_repository(config, name, ap_flag)
         self._log = _logging.getLogger('{}.{}'.format(self.__class__.__name__, name))
         if self._repo.is_disabled():
             raise _errors.DisabledRepoError(self._config.full_name())
@@ -53,25 +53,23 @@ class Poller:
             self._log.info('Waiting for next poll in %d secs...', next_polling_interval)
             sch.enter(next_polling_interval, 1, self.start, (sch, ))
 
-    def _initial_delay(self):
-        """ Delay start of poller on the first poll only """
-        if self._first_entry:
-            self._first_entry = False
-            delay = self._start_delay_secs()
-            if delay is not None and delay > 0:
-                self._log.info('Initial delay: %d secs...', delay)
-                _time.sleep(delay)
-
     def _raise_config_error(self, msg):
         raise _errors.ConfigFileError(self._config.config_file_name(), self._name, msg)
 
 
     # Some common configuration value convenience methods
 
-    def _data_file_name(self):
-        if 'data_file_name' in self._poller_config():
-            return _fortworth.join(self._config.data_dir(), self._poller_config()['data_file_name'])
-        return _fortworth.join(self._config.data_dir(), 'data_file.{}.json'.format(self._name))
+    def _build_repo_full_name(self):
+        """ Convenience method to return build repository full name (owner/name) """
+        return _fortworth.join(self._poller_config()['build_repo_owner'],
+                               self._poller_config()['build_repo_name'])
+
+    def _last_build_hash_file_name(self):
+        if 'last_build_hash_file_name' in self._poller_config():
+            return _fortworth.join(self._config.data_dir(),
+                                   self._poller_config()['last_build_hash_file_name'])
+        return _fortworth.join(self._config.data_dir(),
+                               'last_build_hash.{}.json'.format(self._name))
 
     def _poller_config(self):
         """ Config for this poller """
@@ -92,6 +90,13 @@ class Poller:
 
     def _source_branch(self):
         return self._poller_config()['source_branch']
+
+    def _source_repo_full_name(self):
+        """ Convenience method to return source repository full name (owner/name) """
+        if 'source_repo_owner' not in self._poller_config():
+            return None
+        return _fortworth.join(self._poller_config()['source_repo_owner'],
+                               self._poller_config()['source_repo_name'])
 
     def _start_delay_secs(self):
         # Optional, may not be present in config
