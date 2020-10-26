@@ -55,6 +55,14 @@ git clone https://github.com/kpvdr/wheedle.git
 make install
 ```
 
+**NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
+an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
+[Requirements](#requirements) above). If this variable does not exist, or the token file is not
+present, then it will *NOT* be copied to the installation location (there will be a warning), and an
+attempt to run the application will produce a `TokenNotFoundError`. The token will need to be
+copied manually to `${HOME}/.local/opt/wheedle/data` (or `${INSTALL_DIR}/data` if you specified a
+different install directory) before the application can be run.
+
 ## Configuration
 Configuration is by a text configuration file (by default `wheedle.conf` in the home directory),
 and is formatted as an
@@ -67,23 +75,23 @@ In the following tables, there are references to two GitHub repositories:
    which the ***artifact poller*** polls for new artifacts. The Build Actions workflow in this
    repository is triggered by the *commit poller* when a new commit is detected.
 
-#### Configuration File Sections
+### Configuration File Sections
 The following sections are defined by wheedle:
-| Section Name | Required | Description |
+| Section Name | Req'd | Description |
 | --- | :---: | --- |
 | `Local` | Y | Local server configuration |
 | `GitHub` | Y | GitHub configuration |
 | `Logging` | Y | Logging configuration |
 | `DEFAULT` | | Optional section which sets default values for all following poller sections. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections. **NOTE:** This section MUST appear above the poller sections. |
-| `[<poller-name>]` | | Section which describes a poller. Any section name not used above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller. |
+| `[<poller-name>]` | Y | Section which describes a poller. Any section name not used above is valid. Each poller must have a unique name. At least one poller section must be present. |
 
-#### `Local` Section
-Describes setting local to the server.
+### `Local` Section
+Describes settings local to the server.
 | Key Name | Req'd | Description |
 | --- | :---: | --- |
 | `data_dir` | Y | Name of data directory relative to the install directory. |
 
-#### `GitHub` Section
+### `GitHub` Section
 Describes GitHub global settings and authorization token.
 | Key Name | Req'd | Description |
 | --- | :---: | --- |
@@ -91,22 +99,22 @@ Describes GitHub global settings and authorization token.
 | `gh_api_token_file_name`| Y | The name of the file in the data directory (see `[Local].data_dir` above) which contains the token. This is saved as a hex string with no whitespace. See [Requirements](#requirements) above. |
 | `service_url` | Y | Service URL for the GitHub API. |
 
-#### `Logging` Section
+### `Logging` Section
 This section sets logging preferences for Wheedle.
-| Key Name | Required | Description |
+| Key Name | Req'd | Description |
 | --- | :---: | --- |
 | `default_log_level` | Y | Sets the logging level for output to cout. The possible values are: `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`, `NOTSSET`. Default: `INFO`. See [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) in the Python 3 documentation. |
 
-#### `DEFAULT` Section
+### `DEFAULT` Section
 Optional section which sets default values for all following poller sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections.
 **NOTE:** This section must be placed *above* the poller sections.
 
-#### Poller Section
-Each section that follows names an Artifact Poller and, optionally, a Commit Poller as a pair. Any name not described above is valid, and each named poller (pair) must be unique. The keys in each of these sections will determine whether a Commit Poller will be run alongside the Artifact Poller.
+### Poller Section
+Each section that follows names an Artifact Poller and, optionally, a Commit Poller as a pair. Any name not described above is valid, and each named poller (pair) must be unique. The keys in each of these sections will determine whether a Commit Poller will be run alongside the Artifact Poller:
 
-##### Artifact Poller Keys
+#### Artifact Poller Keys
 The following keys describe the characteristics of an Artifact Poller which polls for new build artifacts on a GitHub *build repository*:
-| Key Name | Required | Description |
+| Key Name | Req'd | Description |
 | --- | :---: | --- |
 | build_repo_owner | Y | Owner of GitHub repository which builds the artifacts through GitHub Actions. |
 | build_repo_name | Y | Name of GitHub repository which builds the artifacts through GitHub Actions. |
@@ -121,9 +129,9 @@ The following keys describe the characteristics of an Artifact Poller which poll
 | artifact_poller_data_file_name | | Name of the artifact poller persistence file in the data directory. By default, it is `artifact-poller.<poller-name>.json`. |
 | build_download_limit | | Limits the number of previous successful and completed GitHub Actions workflows to download that have not been previously seen. This prevents a large number of older artifacts from being downloaded into Bodega which may not be useful. If not set, then all successful workflows which contain artifacts in the last 50 will be downloaded. |
 
-##### Commit Poller Keys
+#### Commit Poller Keys
 The following optional keys, if present in a Poller Section, describe the characteristics of a Commit Poller that polls for new commits in a GitHub *source repository*. If one or more new commits are found, a build is triggered on the build repository polled by the Artifact Poller.
-| Key Name | Required | Description |
+| Key Name | Req'd | Description |
 | --- | :---: | --- |
 | source_repo_owner | | Owner of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_name (below) be, and a Commit Poller will be run. |
 | source_repo_name | | Name of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_owner (above) be, and a Commit Poller will be run. |
@@ -141,7 +149,7 @@ location may be specified by adding `INSTALL_DIR=/another/path` after each make 
 ```
 make run INSTALL_DIR=/my/new/path
 ```
-To stop, use `ctrl+C` or send a `TERM` signal.
+To stop, use `ctrl+C` or send a `TERM` signal to the process.
 
 #### Running in a Docker container
 The container uses the latest version of Fedora.
@@ -153,20 +161,12 @@ The container uses the latest version of Fedora.
    built. While a container is running, it is not possible to delete the image, so make sure it is
    first stopped.
 
-#### Personal Access Token
-**NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in
-an environment variable `${TOKEN_FILE}` prior to running `make install` or `make run` (see
-[Requirements](#requirements) above). If this variable does not exist, or the token file is not
-present, then it will *NOT* be copied to the installation location (there will be a warning), and an
-attempt to run the application will produce a `TokenNotFoundError`. The token will need to be
-copied manually to `${HOME}/.local/opt/wheedle/data` (or `${INSTALL_DIR}/data` if you specified a
-different install directory) before the application can run.
-
 ## Persistent Data
 Persistent data which is re-loaded each time the application is started, is saved in `DATA_DIR`
-(`${HOME}/.local/opt/wheedle` by default). The data files are named `data.<poller-name>.json` by
-default, but each poller section in the configuration file can set a unique name using the
-`data_file_name` key.
+(`${HOME}/.local/opt/wheedle` by default). The data files are named
+`artifact-poller.<poller-name>.json` and `commit-poller.<poller-name>.json` by default, but each
+poller section in the configuration file can set a unique name for these files. In addition, the
+last build commit hash is saved in a file named `last_build_hash.<poller-name>.json`.
 
 Persistent data may be cleared by deleting the JSON files (`*.json`) in `DATA_DIR`, or by running
 `make clean`. **WARNING:** Do not delete data directory or the Personal Access Token file `token`
