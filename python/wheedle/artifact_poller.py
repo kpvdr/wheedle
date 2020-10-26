@@ -286,7 +286,8 @@ class ArtifactPoller(_poller.Poller):
         if 'artifact_poller_data_file_name' in self._poller_config():
             return _fortworth.join(self._config.data_dir(),
                                    self._poller_config()['artifact_poller_data_file_name'])
-        return _fortworth.join(self._config.data_dir(), 'data_file.ap.{}.json'.format(self._name))
+        return _fortworth.join(self._config.data_dir(),
+                               'artifact-poller.{}.json'.format(self._name))
 
     def _last_build_hash_artifact_name(self):
         return self._poller_config()['last_build_hash_artifact_name']

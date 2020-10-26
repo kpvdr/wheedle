@@ -78,56 +78,57 @@ The following sections are defined by wheedle:
 | `[<poller-name>]` | | Section which describes a poller. Any section name not used above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller. |
 
 #### `Local` Section
-| Key Name | Required | Description |
+Describes setting local to the server.
+| Key Name | Req'd | Description |
 | --- | :---: | --- |
-| `data_dir` | Y | Name of data directory relative to the home directory. Default: `data` |
+| `data_dir` | Y | Name of data directory relative to the install directory. |
 
 #### `GitHub` Section
-| Key Name | Required | Description |
+Describes GitHub global settings and authorization token.
+| Key Name | Req'd | Description |
 | --- | :---: | --- |
 | `api_auth_uid` | Y | Authorization ID associated with the token. See [Requirements](#requirements) above. |
-| `gh_api_token_file_name`| Y | Name of file containing token in the data directory. See [Requirements](#requirements) above. |
+| `gh_api_token_file_name`| Y | The name of the file in the data directory (see `[Local].data_dir` above) which contains the token. This is saved as a hex string with no whitespace. See [Requirements](#requirements) above. |
 | `service_url` | Y | Service URL for the GitHub API. |
 
 #### `Logging` Section
+This section sets logging preferences for Wheedle.
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `default_log_level` | Y | Logging level, one of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`, `NOTSSET`. Default: `INFO`. See [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) in the Python 3 documentation. |
+| `default_log_level` | Y | Sets the logging level for output to cout. The possible values are: `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`, `NOTSSET`. Default: `INFO`. See [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) in the Python 3 documentation. |
 
 #### `DEFAULT` Section
-Optional section which sets default values for all following poller sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections. Typically included values which apply to both ArtifactPollers and CommitPollers are `polling_interval_secs`, `error_polling_interval_secs` and `source_branch`. See (Poller Section)[#poller-section] below for descriptions of these keys. **NOTE:** This section must be placed *above* the poller sections.
+Optional section which sets default values for all following poller sections which describe specific pollers. If not set here, then some of these must be set in the individual poller sections which follow. Values set here can also be overridden in the following poller sections.
+**NOTE:** This section must be placed *above* the poller sections.
 
 #### Poller Section
-Section which describes a poller. Any section name not described above is valid. Each poller must have a unique name. The poller type is set by the `class` key which must be in each poller.
-| Key Name | Required | Description |
-| --- | :---: | --- |
-| `class` | Y | Poller class or type, and MUST be one of `CommitPoller` to describe a commit poller, or `ArtifactPoller` to describe an artifact poller. Any other values are invalid. |
-| `repo_owner` | Y | Git repository owner for the source repository (for commit pollers) or the build repository (for artifact pollers) |
-| `repo_name` | Y | Git repository name for the source repository (for commit pollers) or the build repository (for artifact pollers) |
-| `start_delay_secs` | | If present, the delay in starting the poller in seconds. This can be used to allow the commit poller to wait until the artifact poller has downloaded the last commit hash artifact before checking for new commits. This delay only occurs when wheedle is started. |
-| `data_file_name` | | The name of the JSON file in the data directory which contains persistent data for this poller. When each poller is started, this file will be read to obtain its persistent state. Each time an update to the state occurs, this file will be saved. **Default:** `data-file.<poller-nmae>.json` |
-| `polling_interval_secs` | Y | Polling interval in seconds. The period which each poller waits before polling again. This value is typically included in the `DEFAULT` section if several pollers share the same polling interval. |
-| `error_polling_interval_secs` | Y | Polling interval in seconds when a service error exists. This is typically the unavailability of services such as Stagger and Bodega for Artifact pollers. As long as these services are not available, this polling interval is used until service is restored. This allows for an error condition to be corrected without having to wait hours before another poll takes place. This value is typically included in the `DEFAULT` section if several pollers share the same error polling interval. |
-| `source_branch` | Y | Default Git source branch. This is used for tagging and commit polling. This value is typically included in the `DEFAULT` section if several pollers use the same source branch. |
+Each section that follows names an Artifact Poller and, optionally, a Commit Poller as a pair. Any name not described above is valid, and each named poller (pair) must be unique. The keys in each of these sections will determine whether a Commit Poller will be run alongside the Artifact Poller.
 
-#### Artifact Pollers
-The following keys are for artifact pollers only:
+##### Artifact Poller Keys
+The following keys describe the characteristics of an Artifact Poller which polls for new build artifacts on a GitHub *build repository*:
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `build_artifact_name_list` | Y | JSON list of artifacts which will be downloaded from GitHub. Wildcard `*` is valid. Those artifacts not matching this list will be ignored. Example: `[my-file, py*-install]`  **NOTE:** The `last_build_hash_file_name` is also downloaded, but is not set here but in its own section `last_build_hash_file_name`. |
-| `last_build_hash_artifact_name` | Y | Name of artifact containing the last commit hash. This is in addition to the files listed in `build_artifact_name_list` above. |
-| `last_build_hash_file_name` | | The name of the JSON file in the data directory which contains the commit hash for the last build. Each time a new commit is detected by the commit poller, the new commit hash will be saved in this file. **Default:** `commit_hash.<artifact-poller-name>.json`. |
-| `stagger_tag` | Y | The tag which will be used to tag this artifact in Stagger. Usually `untested` or `tested`. |
-| `bodega_url` | Y | URL of the Bodega file archive service. Must be reachable on the network from the wheedle server. |
-| `stagger_url` | Y | URL of the Stagger file tagging service. Must be reachable on the network from the wheedle server. |
-| `build_download_limit` | | Optional limit on the number of workflows to download. The artifact poller will identify the last 50 workflows and will download all those containing artifacts in chronological order (which is usually by order of the run number). However, this can result in an excessive number of artifact downloads for older workflows. If this limit is set, then the poller will identify this number of successful workflows, and will start downloading from that workflow. **Default:** All successful workflows (state `completed:success`) in the first 50 will be downloaded. |
+| build_repo_owner | Y | Owner of GitHub repository which builds the artifacts through GitHub Actions. |
+| build_repo_name | Y | Name of GitHub repository which builds the artifacts through GitHub Actions. |
+| bodega_url | Y | URL for the Bodega artifact storage service. |
+| stagger_url | Y | URL for the Stagger artifact tagging service. |
+| polling_interval_secs| Y | Polling interval for the poller in seconds. Value must be an integer. |
+| error_polling_interval_secs | Y | Polling interval for the poller in seconds when there is a connection error to the Bodega / Stagger services. This allows for a much shorter time between attempts to connect than a standard polling interval (polling_interval_secs). Value must be an integer. |
+| source_branch | Y | Git branch being built and polled for new commits. |
+| stagger_tag | Y | Stagger tag used for tagging artifacts. |
+| build_artifact_name_list | Y | String representing a JSON list of strings containing names of artifacts to be downloaded and processed if found. Wildcards are allowed. |
+| last_build_hash_artifact_name | | Name of the last commit hash JSON file to be written and read from the data directory. By default, it is `commit-hash.<poller-name>.json`. |
+| artifact_poller_data_file_name | | Name of the artifact poller persistence file in the data directory. By default, it is `artifact-poller.<poller-name>.json`. |
+| build_download_limit | | Limits the number of previous successful and completed GitHub Actions workflows to download that have not been previously seen. This prevents a large number of older artifacts from being downloaded into Bodega which may not be useful. If not set, then all successful workflows which contain artifacts in the last 50 will be downloaded. |
 
-#### Commit Pollers
-The following keys are for commit pollers only:
+##### Commit Poller Keys
+The following optional keys, if present in a Poller Section, describe the characteristics of a Commit Poller that polls for new commits in a GitHub *source repository*. If one or more new commits are found, a build is triggered on the build repository polled by the Artifact Poller.
 | Key Name | Required | Description |
 | --- | :---: | --- |
-| `trigger_artifact_poller` | Y | The name of the corresponding artifact poller that will be triggered when a new commit is detected. |
-| `trigger_dry_run` | | Disable actual build trigger, but will log a trigger as a dry run. This is to conserve GitHub resources while testing / debugging. Valid values: 'true', 'yes', '1', and are case-insensitive. Any value not in this list, or the lack of this key will be considered false/off, and actual triggers will be initiated. |
+| source_repo_owner | | Owner of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_name (below) be, and a Commit Poller will be run. |
+| source_repo_name | | Name of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_owner (above) be, and a Commit Poller will be run. |
+| trigger_dry_run | | Disable actual build trigger, but will log a trigger as a dry run. This is to conserve GitHub resources while testing / debugging. Valid values: `true`, `yes`, `1`, and are case-insensitive. Any value not in this list, or the lack of this key will be considered false/off, and actual GitHub Actions builds will be initiated. |
+| commit_poller_data_file_name | | Name of the commit poller persistence file in the data directory. By default, it is `commit-poller.<poller-name>.json`. |
 
 ## Installing, Running and Stopping
 #### Running in local environment
@@ -149,7 +150,8 @@ The container uses the latest version of Fedora.
 1. Once built, the container can be run and stopped as often as needed with `make run-image` and
    `make stop-image` respectively.
 1. An image can be deleted with `make delete-image`. This must be done before a new image can be
-   built.
+   built. While a container is running, it is not possible to delete the image, so make sure it is
+   first stopped.
 
 #### Personal Access Token
 **NOTE:** A Personal Access Token file should exist named `token` and which should be pointed to in

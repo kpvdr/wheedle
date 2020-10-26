@@ -127,15 +127,14 @@ class CommitPoller(_poller.Poller):
     def _trigger_build(self):
         """ Trigger a GitHub action """
         if not self._trigger_dry_run():
-            # _gh_api.gh_http_post_request( \
-            #     '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
-            #                                     self._tap_full_name()),
-            #     auth=self._config.auth(),
-            #     params={'accept': 'application/vnd.github.v3+json'},
-            #     json={'event_type': 'trigger-action'})
+            _gh_api.gh_http_post_request( \
+                '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
+                                                self._build_repo_full_name()),
+                auth=self._config.auth(),
+                params={'accept': 'application/vnd.github.v3+json'},
+                json={'event_type': 'trigger-action'})
             self._log.info('Build triggered on "%s"', self._build_repo_full_name())
         else:
-            # TODO: Clumsy, make poller method
             self._log.info('Build triggered on "%s" (DRY RUN)', self._build_repo_full_name())
 
     def _validate(self):
@@ -151,7 +150,7 @@ class CommitPoller(_poller.Poller):
         if 'commit_poller_data_file_name' in self._poller_config():
             return _fortworth.join(self._config.data_dir(),
                                    self._poller_config()['commit_poller_data_file_name'])
-        return _fortworth.join(self._config.data_dir(), 'data_file.cp.{}.json'.format(self._name))
+        return _fortworth.join(self._config.data_dir(), 'commit-poller.{}.json'.format(self._name))
 
     def _trigger_dry_run(self):
         if 'trigger_dry_run' in self._poller_config():
