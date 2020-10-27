@@ -121,7 +121,6 @@ The following keys describe the characteristics of an Artifact Poller which poll
 | bodega_url | Y | URL for the Bodega artifact storage service. |
 | stagger_url | Y | URL for the Stagger artifact tagging service. |
 | artifact_poller_polling_interval_secs| Y | Polling interval for the artifact poller in seconds. Value must be an integer. |
-| commit_poller_polling_interval_secs| Y | Polling interval for the commit poller in seconds. Value must be an integer. |
 | error_polling_interval_secs | Y | Polling interval for the artifact poller in seconds when there is a connection error to the Bodega / Stagger services. This allows for a much shorter time between attempts to connect than a standard polling interval (polling_interval_secs). Value must be an integer. |
 | source_branch | Y | Git branch being built and polled for new commits. |
 | stagger_tag | Y | Stagger tag used for tagging artifacts. |
@@ -131,11 +130,12 @@ The following keys describe the characteristics of an Artifact Poller which poll
 | build_download_limit | | Limits the number of previous successful and completed GitHub Actions workflows to download that have not been previously seen. This prevents a large number of older artifacts from being downloaded into Bodega which may not be useful. If not set, then all successful workflows which contain artifacts in the last 50 will be downloaded. |
 
 #### Commit Poller Keys
-The following optional keys, if present in a Poller Section, describe the characteristics of a Commit Poller that polls for new commits in a GitHub *source repository*. If one or more new commits are found, a build is triggered on the build repository polled by the Artifact Poller.
+The following optional keys, if present in a Poller Section, describe the characteristics of a Commit Poller that polls for new commits in a GitHub *source repository*. However, if present, some of these keys are **ALL-OR-NOTHING**, meaning either none or all must be present. If all keys marked **AON** in the table below are present, then a Commit Poller will be started. When new commits are found, a build is triggered on the build repository polled by the Artifact Poller. Having only some of the AON keys present will result in a `ConfigFileError`.
 | Key Name | Req'd | Description |
 | --- | :---: | --- |
-| source_repo_owner | | Owner of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_name (below) be, and a Commit Poller will be run. |
-| source_repo_name | | Name of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_owner (above) be, and a Commit Poller will be run. |
+| source_repo_owner | AON | Owner of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_name (below) be, and a Commit Poller will be run. |
+| source_repo_name | AON | Name of GitHub repository which contains the source code checked out into the Build Repository and which are built to create artifacts. **NOTE:** If this is present, then so must source_repo_owner (above) be, and a Commit Poller will be run. |
+| commit_poller_polling_interval_secs| AON | Polling interval for the commit poller in seconds. Value must be an integer. |
 | trigger_dry_run | | Disable actual build trigger, but will log a trigger as a dry run. This is to conserve GitHub resources while testing / debugging. Valid values: `true`, `yes`, `1`, and are case-insensitive. Any value not in this list, or the lack of this key will be considered false/off, and actual GitHub Actions builds will be initiated. |
 | commit_poller_data_file_name | | Name of the commit poller persistence file in the data directory. By default, it is `commit-poller.<poller-name>.json`. |
 

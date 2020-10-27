@@ -85,11 +85,15 @@ class Configuration:
         self._check_keys(['bodega_url', 'build_artifact_name_list', 'build_repo_name',
                           'build_repo_owner', 'error_polling_interval_secs',
                           'last_build_hash_artifact_name', 'artifact_poller_polling_interval_secs',
-                          'commit_poller_polling_interval_secs', 'source_branch', 'stagger_tag',
-                          'stagger_url'], key)
+                          'source_branch', 'stagger_tag', 'stagger_url'], key)
 
     def _check_commit_poller(self, key):
-        self._check_keys(['source_repo_owner', 'source_repo_name'], key)
+        # all-or-nothing test for these three keys
+        if 'source_repo_owner' in self._config[key] or \
+           'source_repo_name' in self._config[key] or \
+           'commit_poller_polling_interval_secs' in self._config[key]:
+            self._check_keys(['source_repo_owner', 'source_repo_name',
+                              'commit_poller_polling_interval_secs'], key)
 
     def _check_keys(self, key_list, section=None):
         target_list = []
@@ -106,9 +110,7 @@ class Configuration:
                                                                        'DEFAULT']]
         for poller_key in poller_keys:
             self._check_artifact_poller(poller_key)
-            if 'source_repo_owner' in self._config[poller_key] or \
-                'source_repo_name' in self._config[poller_key]:
-                self._check_commit_poller(poller_key)
+            self._check_commit_poller(poller_key)
 
     def _read_config_file(self, config_file_name):
         try:
