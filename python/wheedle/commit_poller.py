@@ -152,6 +152,14 @@ class CommitPoller(_poller.Poller):
                                    self._poller_config()['commit_poller_data_file_name'])
         return _fortworth.join(self._config.data_dir(), 'commit-poller.{}.json'.format(self._name))
 
+    def _polling_interval_secs(self, _):
+        try:
+            return int(self._poller_config()['commit_poller_polling_interval_secs'])
+        except ValueError:
+            self._raise_config_error(('Invalid value "{}" for '
+                                      '"commit_poller_polling_interval_secs"').format( \
+                self._poller_config()['commit_poller_polling_interval_secs']))
+
     def _trigger_dry_run(self):
         if 'trigger_dry_run' in self._poller_config():
             return self._poller_config()['trigger_dry_run'].lower() in ['true', 'yes', '1']

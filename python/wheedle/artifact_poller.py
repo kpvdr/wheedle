@@ -299,6 +299,20 @@ class ArtifactPoller(_poller.Poller):
         return _fortworth.join(self._config.data_dir(),
                                'last_build_hash.{}.json'.format(self._name))
 
+    def _polling_interval_secs(self, error_flag):
+        if error_flag:
+            try:
+                return int(self._poller_config()['error_polling_interval_secs'])
+            except ValueError:
+                self._raise_config_error('Invalid value "{}" for "error_polling_interval_secs"'. \
+                    format(self._poller_config()['error_polling_interval_secs']))
+        try:
+            return int(self._poller_config()['artifact_poller_polling_interval_secs'])
+        except ValueError:
+            self._raise_config_error(('Invalid value "{}" for '
+                                      '"artifact_poller_polling_interval_secs"').format( \
+                self._poller_config()['artifact_poller_polling_interval_secs']))
+
     def _repo_name(self):
         return self._poller_config()['build_repo_name']
 

@@ -84,8 +84,9 @@ class Configuration:
     def _check_artifact_poller(self, key):
         self._check_keys(['bodega_url', 'build_artifact_name_list', 'build_repo_name',
                           'build_repo_owner', 'error_polling_interval_secs',
-                          'last_build_hash_artifact_name', 'polling_interval_secs', 'source_branch',
-                          'stagger_tag', 'stagger_url'], key)
+                          'last_build_hash_artifact_name', 'artifact_poller_polling_interval_secs',
+                          'commit_poller_polling_interval_secs', 'source_branch', 'stagger_tag',
+                          'stagger_url'], key)
 
     def _check_commit_poller(self, key):
         self._check_keys(['source_repo_owner', 'source_repo_name'], key)

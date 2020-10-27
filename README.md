@@ -120,8 +120,9 @@ The following keys describe the characteristics of an Artifact Poller which poll
 | build_repo_name | Y | Name of GitHub repository which builds the artifacts through GitHub Actions. |
 | bodega_url | Y | URL for the Bodega artifact storage service. |
 | stagger_url | Y | URL for the Stagger artifact tagging service. |
-| polling_interval_secs| Y | Polling interval for the poller in seconds. Value must be an integer. |
-| error_polling_interval_secs | Y | Polling interval for the poller in seconds when there is a connection error to the Bodega / Stagger services. This allows for a much shorter time between attempts to connect than a standard polling interval (polling_interval_secs). Value must be an integer. |
+| artifact_poller_polling_interval_secs| Y | Polling interval for the artifact poller in seconds. Value must be an integer. |
+| commit_poller_polling_interval_secs| Y | Polling interval for the commit poller in seconds. Value must be an integer. |
+| error_polling_interval_secs | Y | Polling interval for the artifact poller in seconds when there is a connection error to the Bodega / Stagger services. This allows for a much shorter time between attempts to connect than a standard polling interval (polling_interval_secs). Value must be an integer. |
 | source_branch | Y | Git branch being built and polled for new commits. |
 | stagger_tag | Y | Stagger tag used for tagging artifacts. |
 | build_artifact_name_list | Y | String representing a JSON list of strings containing names of artifacts to be downloaded and processed if found. Wildcards are allowed. |

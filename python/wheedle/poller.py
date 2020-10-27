@@ -75,18 +75,18 @@ class Poller:
         """ Config for this poller """
         return self._config[self._name]
 
-    def _polling_interval_secs(self, error_flag):
-        if error_flag:
-            try:
-                return int(self._poller_config()['error_polling_interval_secs'])
-            except ValueError:
-                self._raise_config_error('Invalid value "{}" for "error_polling_interval_secs"'. \
-                    format(self._poller_config()['error_polling_interval_secs']))
-        try:
-            return int(self._poller_config()['polling_interval_secs'])
-        except ValueError:
-            self._raise_config_error('Invalid value "{}" for "polling_interval_secs"'.format( \
-                self._poller_config()['polling_interval_secs']))
+    # def _polling_interval_secs(self, error_flag):
+    #     if error_flag:
+    #         try:
+    #             return int(self._poller_config()['error_polling_interval_secs'])
+    #         except ValueError:
+    #             self._raise_config_error('Invalid value "{}" for "error_polling_interval_secs"'. \
+    #                 format(self._poller_config()['error_polling_interval_secs']))
+    #     try:
+    #         return int(self._poller_config()['polling_interval_secs'])
+    #     except ValueError:
+    #         self._raise_config_error('Invalid value "{}" for "polling_interval_secs"'.format( \
+    #             self._poller_config()['polling_interval_secs']))
 
     def _source_branch(self):
         return self._poller_config()['source_branch']
@@ -111,6 +111,10 @@ class Poller:
     @_abc.abstractmethod
     def poll(self):
         """ Perform poll task  """
+
+    @_abc.abstractmethod
+    def _polling_interval_secs(self, error_flag):
+        """ Get the polling interval for this poller """
 
     @_abc.abstractmethod
     def _read_data(self):
