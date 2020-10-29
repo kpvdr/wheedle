@@ -126,7 +126,7 @@ class CommitPoller(_poller.Poller):
 
     def _trigger_build(self):
         """ Trigger a GitHub action """
-        if not self._trigger_dry_run():
+        if not self._dry_run():
             _gh_api.gh_http_post_request( \
                 '{}/repos/{}/dispatches'.format(self._config['GitHub']['service_url'],
                                                 self._build_repo_full_name()),
@@ -160,7 +160,7 @@ class CommitPoller(_poller.Poller):
                                       '"commit_poller_polling_interval_secs"').format( \
                 self._poller_config()['commit_poller_polling_interval_secs']))
 
-    def _trigger_dry_run(self):
+    def _dry_run(self):
         if 'trigger_dry_run' in self._poller_config():
             return self._poller_config()['trigger_dry_run'].lower() in ['true', 'yes', '1']
         return False

@@ -61,7 +61,7 @@ function run {
   if image_exists; then
     if ! container_exists; then
       echo "Starting container with \"${IMAGE_NAME}\""
-      podman run --rm ${IMAGE_NAME} &
+      podman run --rm --network host ${IMAGE_NAME} &
     else
       local cid=$(container_id)
       echo "Container ${cid} with \"${IMAGE_NAME}\" already running"

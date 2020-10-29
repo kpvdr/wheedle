@@ -100,11 +100,13 @@ class ArtifactPoller(_poller.Poller):
             build_data = _fortworth.BuildData(self._repo_name(),
                                               self._source_branch(), 0, None)
             _fortworth.bodega_build_exists(build_data, self._bodega_url())
+            self._log.info('Bodega service found at %s', self._bodega_url())
         except _requests.exceptions.ConnectionError:
             error_list.append(_errors.ServiceConnectionError('Bodega', self._bodega_url()))
 
         try:
             _fortworth.stagger_get_data(self._stagger_url())
+            self._log.info('Stagger service found at %s', self._stagger_url())
         except _requests.exceptions.ConnectionError:
             error_list.append(_errors.ServiceConnectionError('Stagger', self._stagger_url()))
         if len(error_list) > 0:
@@ -213,43 +215,45 @@ class ArtifactPoller(_poller.Poller):
 
     def _push_to_bodega(self, wf_item, bodega_temp_dir):
         """ Push an artifact to Bodega """
-        build_data = _fortworth.BuildData(self._repo_name(), self._source_branch(),
-                                          wf_item.run_number(), wf_item.html_url())
-        try:
-            _fortworth.bodega_put_build(bodega_temp_dir, build_data,
-                                        service_url=self._bodega_url())
-            return _fortworth.join(self._bodega_url(), build_data.repo, build_data.branch,
-                                   str(build_data.id))
-        except _requests.exceptions.ConnectionError:
-            self._log.error('Bodega not running or invalid Bodega URL %s',
-                            self._config['Local']['stagger_url'])
+        if not self._dry_run():
+            build_data = _fortworth.BuildData(self._repo_name(), self._source_branch(),
+                                              wf_item.run_number(), wf_item.html_url())
+            try:
+                _fortworth.bodega_put_build(bodega_temp_dir, build_data,
+                                            service_url=self._bodega_url())
+                return _fortworth.join(self._bodega_url(), build_data.repo, build_data.branch,
+                                       str(build_data.id))
+            except _requests.exceptions.ConnectionError:
+                self._log.error('Bodega not running or invalid Bodega URL %s',
+                                self._config['Local']['stagger_url'])
 
 
     def _push_to_stagger(self, workflow_metadata, bodega_artifact_list, bodega_artifact_path):
         """ Tag an artifact in Stagger """
-        stagger_artifact_list = {}
-        for artifact, bodega_file_name in bodega_artifact_list:
-            stagger_artifact_list[artifact.name()] = {
-                'type': 'file',
-                'update_time': _gh_api.str_time_to_milli_ts(artifact.created_at()),
-                'url': _fortworth.join(bodega_artifact_path, bodega_file_name + '.zip'),
-                }
-        commit_url = None if self._source_repo_full_name() is None else \
-            'https://github.com/{}/commit/{}'.format(self._source_repo_full_name(),
-                                                     self._last_build_commit_hash)
-        tag_data = {'update_time': _gh_api.str_time_to_milli_ts(workflow_metadata.updated_at()),
-                    'build_id': workflow_metadata.run_number(),
-                    'build_url': workflow_metadata.html_url(),
-                    'commit_id': self._last_build_commit_hash,
-                    'commit_url': commit_url,
-                    'artifacts': stagger_artifact_list,
-                   }
-        try:
-            _fortworth.stagger_put_tag(self._repo_name(), self._source_branch(),
-                                       self._stagger_tag(), tag_data,
-                                       service_url=self._stagger_url())
-        except _requests.exceptions.ConnectionError:
-            self._log.error('Stagger not running or invalid Bodega URL %s', self._stagger_url())
+        if not self._dry_run():
+            stagger_artifact_list = {}
+            for artifact, bodega_file_name in bodega_artifact_list:
+                stagger_artifact_list[artifact.name()] = {
+                    'type': 'file',
+                    'update_time': _gh_api.str_time_to_milli_ts(artifact.created_at()),
+                    'url': _fortworth.join(bodega_artifact_path, bodega_file_name + '.zip'),
+                    }
+            commit_url = None if self._source_repo_full_name() is None else \
+                'https://github.com/{}/commit/{}'.format(self._source_repo_full_name(),
+                                                         self._last_build_commit_hash)
+            tag_data = {'update_time': _gh_api.str_time_to_milli_ts(workflow_metadata.updated_at()),
+                        'build_id': workflow_metadata.run_number(),
+                        'build_url': workflow_metadata.html_url(),
+                        'commit_id': self._last_build_commit_hash,
+                        'commit_url': commit_url,
+                        'artifacts': stagger_artifact_list,
+                       }
+            try:
+                _fortworth.stagger_put_tag(self._repo_name(), self._source_branch(),
+                                           self._stagger_tag(), tag_data,
+                                           service_url=self._stagger_url())
+            except _requests.exceptions.ConnectionError:
+                self._log.error('Stagger not running or invalid Bodega URL %s', self._stagger_url())
 
     def _read_data(self):
         """ Read the persistent data for this poller """
@@ -288,6 +292,11 @@ class ArtifactPoller(_poller.Poller):
                                    self._poller_config()['artifact_poller_data_file_name'])
         return _fortworth.join(self._config.data_dir(),
                                'artifact-poller.{}.json'.format(self._name))
+
+    def _dry_run(self):
+        if 'bodega_stagger_dry_run' in self._poller_config():
+            return self._poller_config()['bodega_stagger_dry_run'].lower() in ['true', 'yes', '1']
+        return False
 
     def _last_build_hash_artifact_name(self):
         return self._poller_config()['last_build_hash_artifact_name']
